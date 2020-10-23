@@ -1,11 +1,14 @@
-if exists("g:loaded_run") || &compatible
+if exists('g:loaded_run') || &compatible
   " finish
 endif
 let g:loaded_run = 1
 
 " vars
 let g:run_jobs = {}
-let g:rundir = '~/.vim/rundir'
+let g:rundir = $HOME . '/.vim/rundir'
+if !isdirectory(g:rundir)
+  call mkdir(g:rundir, 'p')
+endif
 
 " commands
 command -nargs=* Run :call Run()
