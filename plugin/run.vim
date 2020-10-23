@@ -4,17 +4,30 @@ endif
 let g:loaded_run = 1
 
 " vars
-let g:run_jobs = {}
-let g:rundir = $HOME . '/.vim/rundir'
+if !exists('g:run_jobs')
+  let g:run_jobs = {}
+endif
+if !exists('g:run_quiet')
+  let g:run_quiet = 0
+endif
+if !exists('g:rundir')
+  let g:rundir = $HOME . '/.vim/rundir'
+endif
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
 
 " commands
 command -nargs=* Run :call Run(<q-args>)
+command RunList :call RunList()
 
 
 " main functions
+function! RunList()
+  call _UpdateRunJobs
+  copen
+endfunction
+
 function! Run(cmd)
   let tempfname = trim(system('mktemp'))
   let job = job_start(a:cmd, {
@@ -48,13 +61,17 @@ endfunction
 
 
 " utility
+function! _IsQFOpen()
+  return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") == "qf"')) > 0
+endfunction
+
 function! _CleanCmdName(cmd)
   " replace dir-breaking chars
   return substitute(a:cmd, '[\/]', '', 'g')
 endfunction
 
-function! _ShowRunJobs()
-  let qf_output = []
+function! _UpdateRunJobs()
+  let g:qf_output = []
   for [pid, val] in g:run_jobs->items()
     let qf_item = {
       \ 'lnum': 1
@@ -66,15 +83,16 @@ function! _ShowRunJobs()
       let qf_item['filename'] = val['filename']
       let qf_item['text'] = 'DONE'
     endif
-    call add(qf_output, qf_item)
+    call add(g:qf_output, qf_item)
   endfor
-  call setqflist(qf_output)
-  copen
-  wincmd p
+  call setqflist(g:qf_output)
 endfunction
 
 function! _RunAlertNoFocus(content, ...)
-  call _ShowRunJobs()
+  call _UpdateRunJobs()
+  if !g:run_quiet || _IsQFOpen()
+    copen
+  endif
   redraw | echom a:content
 endfunction
 
@@ -97,5 +115,5 @@ function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let pid = job_info(job)['process']
   let fname = _RunGetJobDetails(job)['filename']
-  call _RunAlertNoFocus('Job ' . pid . ' completed, saved to ' . fname)
+  call _RunAlertNoFocus('Job ' . pid . ' completed, run :RunList to view.')
 endfunction
