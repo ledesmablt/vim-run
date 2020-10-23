@@ -5,6 +5,11 @@ let g:loaded_run = 1
 
 " vars
 let g:run_jobs = {}
+let g:run_userbuf = bufname('%')
+if !exists('g:run_msgs_tempfname')
+  let g:run_msgs_tempfname = trim(system('mktemp'))
+endif
+
 let g:rundir = $HOME . '/.vim/rundir'
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
@@ -41,13 +46,32 @@ function! Run()
         \ }
   let g:run_jobs[pid] = job_obj
   execute 'badd ' . tempfname
-  let msg = "Job " . pid . " - " . cmd . "\nOutput streaming to buffer "
-              \ . bufnr(tempfname) . " - " . tempfname
-  echo msg
+  let msg = "Job " . pid . " - " . cmd . "Output streaming to buffer "
+        \ . bufnr(tempfname) . " - " . tempfname
+  call _RunAlertNoFocus(msg)
 endfunction
 
 
 " utility
+function! _RunAlertNoFocus(content, ...)
+  let clear_output = get(a:, 1, 0)
+  let redirfn = '>>'
+  if clear_output
+    let redirfn = '>'
+  endif
+  let run_userbuf = bufname('%')
+
+  " append content to msgs file
+  execute 'redir! ' . redirfn . ' ' . g:run_msgs_tempfname
+  silent echo a:content
+  redir END
+
+  " open msgs file and return focus
+  execute 'cf ' . g:run_msgs_tempfname
+  copen
+  exec bufwinnr(run_userbuf) . 'wincmd w'
+endfunction
+
 function! _RunGetJobDetails(job)
   let info = job_info(a:job)
   return g:run_jobs[info['process']]
@@ -67,5 +91,5 @@ function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let pid = job_info(job)['process']
   let fname = _RunGetJobDetails(job)['filename']
-  echom "Job" pid "completed, saved to" fname
+  call _RunAlertNoFocus('Job ' . pid . ' completed, saved to ' . fname)
 endfunction
