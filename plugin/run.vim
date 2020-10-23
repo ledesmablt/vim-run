@@ -5,11 +5,6 @@ let g:loaded_run = 1
 
 " vars
 let g:run_jobs = {}
-let g:run_userbuf = bufname('%')
-if !exists('g:run_msgs_tempfname')
-  let g:run_msgs_tempfname = trim(system('mktemp'))
-endif
-
 let g:rundir = $HOME . '/.vim/rundir'
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
@@ -28,7 +23,6 @@ function! Run(cmd)
         \ 'out_msg': 0, 'out_modifiable': 0,
         \ 'out_cb': '_RunOutCB',
         \ 'close_cb': '_RunCloseCB',
-        \ 'stoponexit': '',
         \ 'pty': 1 
         \ })
   let info = job_info(job)
@@ -58,21 +52,14 @@ function! _CleanCmdName(cmd)
   return substitute(a:cmd, '[\/]', '', 'g')
 endfunction
 
-function! _RunAlertNoFocus(content, ...)
-  let clear_output = get(a:, 1, 0)
-  let redirfn = '>>'
-  if clear_output
-    let redirfn = '>'
+function! _RunAlertNoFocus(content, options)
+  if has_key(options, 'clear')
+    call setqflist([])
   endif
+
+  " append new content to quickfix menu
   let run_userbuf = bufname('%')
-
-  " append content to msgs file
-  execute 'redir! ' . redirfn . ' ' . g:run_msgs_tempfname
-  silent echo a:content
-  redir END
-
-  " open msgs file and return focus
-  silent execute 'cf ' . g:run_msgs_tempfname
+  silent caddexpr a:content
   copen
   exec bufwinnr(run_userbuf) . 'wincmd w'
 endfunction
