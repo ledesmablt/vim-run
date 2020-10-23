@@ -2,15 +2,67 @@ if exists("g:loaded_run") || &compatible
   " finish
 endif
 let g:loaded_run = 1
+
+" vars
+let g:run_jobs = {}
+let g:rundir = '~/.vim/rundir'
+
+" commands
 command -nargs=* Run :call Run()
 
+
+" main functions
 function! Run()
-  let fname = trim(system('mktemp'))
+  let tempfname = trim(system('mktemp'))
   let cmd = 'python3 test.py'
-  let job = job_start(cmd,
-        \ { 'out_io': 'buffer', 'out_name': fname,
+  let job = job_start(cmd, {
         \ 'cwd': getcwd(),
-        \ 'pty': 1 }
-        \ )
-  execute 'edit' . fname
+        \ 'out_io': 'buffer', 'out_name': tempfname,
+        \ 'out_msg': 0, 'out_modifiable': 0,
+        \ 'out_cb': '_RunOutCB',
+        \ 'close_cb': '_RunCloseCB',
+        \ 'stoponexit': '',
+        \ 'pty': 1 
+        \ })
+  let info = job_info(job)
+  let pid = info['process']
+  let timestamp = strftime('%Y%m%d_%H%M%S')
+  let fname = g:rundir . '/' . timestamp . '__' . info['cmd'][0] . '.log'
+  let job_obj = {
+        \ 'pid': pid,
+        \ 'command': cmd,
+        \ 'bufname': tempfname,
+        \ 'filename': fname,
+        \ 'timestamp': timestamp,
+        \ 'info': info
+        \ }
+  let g:run_jobs[pid] = job_obj
+  execute 'badd ' . tempfname
+  let msg = "Job " . pid . " - " . cmd . "\nOutput streaming to buffer "
+              \ . bufnr(tempfname) . " - " . tempfname
+  echo msg
+endfunction
+
+
+" utility
+function! _RunGetJobDetails(job)
+  let info = job_info(a:job)
+  return g:run_jobs[info['process']]
+endfunction
+
+
+" callbacks
+function! _RunOutCB(channel, msg)
+  let job = ch_getjob(a:channel)
+  let fname = _RunGetJobDetails(job)['filename']
+  execute 'redir >> ' . fname
+  silent echo a:msg
+  redir END
+endfunction
+
+function! _RunCloseCB(channel)
+  let job = ch_getjob(a:channel)
+  let pid = job_info(job)['process']
+  let fname = _RunGetJobDetails(job)['filename']
+  echom "Job" pid "completed, saved to" fname
 endfunction
