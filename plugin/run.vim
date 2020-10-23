@@ -36,7 +36,8 @@ function! Run(cmd)
         \ 'bufname': tempfname,
         \ 'filename': fname,
         \ 'timestamp': timestamp,
-        \ 'info': info
+        \ 'info': info,
+        \ 'job': job,
         \ }
   let g:run_jobs[pid] = job_obj
   execute 'badd ' . tempfname
@@ -52,16 +53,29 @@ function! _CleanCmdName(cmd)
   return substitute(a:cmd, '[\/]', '', 'g')
 endfunction
 
-function! _RunAlertNoFocus(content, options)
-  if has_key(options, 'clear')
-    call setqflist([])
-  endif
-
-  " append new content to quickfix menu
-  let run_userbuf = bufname('%')
-  silent caddexpr a:content
+function! _ShowRunJobs()
+  let qf_output = []
+  for [pid, val] in g:run_jobs->items()
+    let qf_item = {
+      \ 'lnum': 1
+      \ }
+    if job_status(val['job']) == 'run'
+      let qf_item['bufnr'] = bufnr(val['bufname'])
+      let qf_item['text'] = 'RUNNING'
+    else
+      let qf_item['filename'] = val['filename']
+      let qf_item['text'] = 'DONE'
+    endif
+    call add(qf_output, qf_item)
+  endfor
+  call setqflist(qf_output)
   copen
-  exec bufwinnr(run_userbuf) . 'wincmd w'
+  wincmd p
+endfunction
+
+function! _RunAlertNoFocus(content, ...)
+  call _ShowRunJobs()
+  redraw | echom a:content
 endfunction
 
 function! _RunGetJobDetails(job)
