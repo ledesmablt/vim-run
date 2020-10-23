@@ -16,14 +16,13 @@ if !isdirectory(g:rundir)
 endif
 
 " commands
-command -nargs=* Run :call Run()
+command -nargs=* Run :call Run(<q-args>)
 
 
 " main functions
-function! Run()
+function! Run(cmd)
   let tempfname = trim(system('mktemp'))
-  let cmd = 'python3 test.py'
-  let job = job_start(cmd, {
+  let job = job_start(a:cmd, {
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': tempfname,
         \ 'out_msg': 0, 'out_modifiable': 0,
@@ -35,10 +34,11 @@ function! Run()
   let info = job_info(job)
   let pid = info['process']
   let timestamp = strftime('%Y%m%d_%H%M%S')
-  let fname = g:rundir . '/' . timestamp . '__' . info['cmd'][0] . '.log'
+  let shortcmd = _CleanCmdName(info['cmd'][0])
+  let fname = g:rundir . '/' . timestamp . '__' . shortcmd . '.log'
   let job_obj = {
         \ 'pid': pid,
-        \ 'command': cmd,
+        \ 'command': a:cmd,
         \ 'bufname': tempfname,
         \ 'filename': fname,
         \ 'timestamp': timestamp,
@@ -46,13 +46,18 @@ function! Run()
         \ }
   let g:run_jobs[pid] = job_obj
   execute 'badd ' . tempfname
-  let msg = "Job " . pid . " - " . cmd . "Output streaming to buffer "
-        \ . bufnr(tempfname) . " - " . tempfname
+  let msg = "Job " . pid . " - " . a:cmd . " - output streaming to buffer "
+        \ . bufnr(tempfname)
   call _RunAlertNoFocus(msg)
 endfunction
 
 
 " utility
+function! _CleanCmdName(cmd)
+  " replace dir-breaking chars
+  return substitute(a:cmd, '[\/]', '', 'g')
+endfunction
+
 function! _RunAlertNoFocus(content, ...)
   let clear_output = get(a:, 1, 0)
   let redirfn = '>>'
@@ -67,7 +72,7 @@ function! _RunAlertNoFocus(content, ...)
   redir END
 
   " open msgs file and return focus
-  execute 'cf ' . g:run_msgs_tempfname
+  silent execute 'cf ' . g:run_msgs_tempfname
   copen
   exec bufwinnr(run_userbuf) . 'wincmd w'
 endfunction
