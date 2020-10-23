@@ -29,10 +29,14 @@ function! RunList()
 endfunction
 
 function! Run(cmd)
-  let tempfname = trim(system('mktemp'))
+  let timestamp = strftime('%Y%m%d_%H%M%S')
+  let shortcmd = _CleanCmdName(a:cmd)
+  let fname = '/' . timestamp . '__' . shortcmd . '.log'
+  let fpath = g:rundir . fname
+  let temppath = '/tmp' . fname
   let job = job_start(a:cmd, {
         \ 'cwd': getcwd(),
-        \ 'out_io': 'buffer', 'out_name': tempfname,
+        \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
         \ 'out_cb': '_RunOutCB',
         \ 'close_cb': '_RunCloseCB',
@@ -40,22 +44,19 @@ function! Run(cmd)
         \ })
   let info = job_info(job)
   let pid = info['process']
-  let timestamp = strftime('%Y%m%d_%H%M%S')
-  let shortcmd = _CleanCmdName(info['cmd'][0])
-  let fname = g:rundir . '/' . timestamp . '__' . shortcmd . '.log'
   let job_obj = {
         \ 'pid': pid,
         \ 'command': a:cmd,
-        \ 'bufname': tempfname,
-        \ 'filename': fname,
+        \ 'bufname': temppath,
+        \ 'filename': fpath,
         \ 'timestamp': timestamp,
         \ 'info': info,
         \ 'job': job,
         \ }
   let g:run_jobs[pid] = job_obj
-  execute 'badd ' . tempfname
-  let msg = "Job " . pid . " - " . a:cmd . " - output streaming to buffer "
-        \ . bufnr(tempfname)
+  execute 'badd ' . temppath
+  let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
+        \ . bufnr(temppath)
   call _RunAlertNoFocus(msg)
 endfunction
 
@@ -67,7 +68,7 @@ endfunction
 
 function! _CleanCmdName(cmd)
   " replace dir-breaking chars
-  return substitute(a:cmd, '[\/]', '', 'g')
+  return substitute(split(a:cmd, ' ')[0], '[\/]', '', 'g')
 endfunction
 
 function! _UpdateRunJobs()
@@ -114,6 +115,8 @@ endfunction
 function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let pid = job_info(job)['process']
-  let fname = _RunGetJobDetails(job)['filename']
-  call _RunAlertNoFocus('Job ' . pid . ' completed, run :RunList to view.')
+  let info = _RunGetJobDetails(job)
+  call _RunAlertNoFocus('[' . info['timestamp'] . '] completed, run :RunList to view.')
+  exec 'bd ' bufnr(info['bufname'])
+
 endfunction
