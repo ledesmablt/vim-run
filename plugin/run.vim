@@ -185,5 +185,9 @@ function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
   let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
+  let todel = bufnr(info.bufname)
+  if todel != bufnr('%')
+    exec 'bd ' . todel
+  endif
   call _RunAlertNoFocus(msg, info['options'])
 endfunction
