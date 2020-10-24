@@ -7,8 +7,8 @@ let g:loaded_run = 1
 if !exists('g:run_jobs')
   let g:run_jobs = {}
 endif
-if !exists('g:run_quiet')
-  let g:run_quiet = 0
+if !exists('g:run_quiet_default')
+  let g:run_quiet_default = 0
 endif
 if !exists('g:rundir')
   let g:rundir = $HOME . '/.vim/rundir'
@@ -19,6 +19,7 @@ endif
 
 " commands
 command -nargs=* -complete=file Run :call Run(<q-args>)
+command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command RunList :call RunList()
 
 
@@ -28,11 +29,23 @@ function! RunList()
   copen
 endfunction
 
-function! Run(cmd)
+function! RunQuiet(cmd)
+  call Run(a:cmd, { 'quiet': 1 })
+endfunction
+
+function! Run(cmd, ...)
+  " check if command provided
   if len(trim(a:cmd)) == 0
     echoerr 'Please provide a command.'
     return
   endif
+
+  " get options dict
+  let options = get(a:, 1, 0)
+  if type(options) != 4
+    let options = {}
+  endif
+
   let runcmdpath = trim(system('mktemp'))
   let timestamp = strftime('%Y%m%d_%H%M%S')
   let shortcmd = _CleanCmdName(a:cmd)
@@ -52,6 +65,8 @@ function! Run(cmd)
         \ 'close_cb': '_RunCloseCB',
         \ 'pty': 1 
         \ })
+  
+  " get job info for global dict
   let info = job_info(job)
   let pid = info['process']
   let job_obj = {
@@ -61,12 +76,13 @@ function! Run(cmd)
         \ 'filename': fpath,
         \ 'timestamp': timestamp,
         \ 'job': job,
+        \ 'options': options
         \ }
   let g:run_jobs[pid] = job_obj
-  execute 'badd ' . temppath
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
-  call _RunAlertNoFocus(msg)
+
+  call _RunAlertNoFocus(msg, options)
 endfunction
 
 
@@ -107,8 +123,13 @@ function! _UpdateRunJobs()
 endfunction
 
 function! _RunAlertNoFocus(content, ...)
+  let options = get(a:, 1, 0)
+  if type(options) != 4
+    let options = {}
+  endif
+
   call _UpdateRunJobs()
-  if !g:run_quiet || _IsQFOpen()
+  if (!g:run_quiet_default || _IsQFOpen()) && !has_key(options, 'quiet')
     copen
   endif
   redraw | echom a:content
@@ -132,5 +153,6 @@ endfunction
 function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
-  call _RunAlertNoFocus('[' . info['timestamp'] . '] completed, run :RunList to view.')
+  let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
+  call _RunAlertNoFocus(msg, info['options'])
 endfunction
