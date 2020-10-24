@@ -21,12 +21,36 @@ endif
 command -nargs=* -complete=file Run :call Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command RunList :call RunList()
+command -nargs=0 RunClear :call RunClear(['DONE', 'FAIL'])
+command -nargs=0 RunClearDone :call RunClear(['DONE'])
+command -nargs=0 RunClearFail :call RunClear(['FAIL'])
 
 
 " main functions
 function! RunList()
   call _UpdateRunJobs()
   copen
+endfunction
+
+function! RunClear(status_list)
+  " user confirm
+  let confirm = input(
+        \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
+        \ )
+  if toupper(confirm) != 'Y'
+    return
+  endif
+
+  " remove all jobs that match status_list
+  let clear_count = 0
+  for job in g:run_jobs->values()
+    let status_match = a:status_list->index(job['status']) >= 0
+    if status_match
+      unlet g:run_jobs[job['timestamp']]
+      let clear_count = clear_count + 1
+    endif
+  endfor
+  call _RunAlertNoFocus('Cleared ' . clear_count . ' jobs.')
 endfunction
 
 function! RunQuiet(cmd)
