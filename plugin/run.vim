@@ -73,7 +73,9 @@ endfunction
 
 function! _UpdateRunJobs()
   let g:qf_output = []
-  for [pid, val] in g:run_jobs->items()
+  let keys = reverse(sort(g:run_jobs->keys()))
+  for key in keys
+    let val = g:run_jobs[key]
     let qf_item = {
       \ 'lnum': 1
       \ }
@@ -117,6 +119,4 @@ function! _RunCloseCB(channel)
   let pid = job_info(job)['process']
   let info = _RunGetJobDetails(job)
   call _RunAlertNoFocus('[' . info['timestamp'] . '] completed, run :RunList to view.')
-  exec 'bd ' bufnr(info['bufname'])
-
 endfunction
