@@ -1,0 +1,18 @@
+*vim-run.txt* run, view, and manage UNIX shell commands
+
+				       _									~
+				__   _(_)_ __ ___        _ __ _   _ _ __	~
+				\ \ / / | '_ ` _ \ _____| '__| | | | '_ \	~
+				 \ V /| | | | | | |_____| |  | |_| | | | |	~
+				  \_/ |_|_| |_| |_|     |_|   \__,_|_| |_|	~
+
+			Run, view, and manage UNIX shell commands with ease
+					from your favorite code editor.
+
+==============================================================================
+CONTENTS                                                             *vim-run*
+
+    1. Introduction             |vim-run-intro|
+    2. Usage                    |vim-run-usage|
+    3. Mappings                 |vim-run-mappings|
+    4. Configuration            |vim-run-configuration|
