@@ -5,7 +5,7 @@ let g:loaded_run = 1
 
 " vars
 if !exists('g:run_jobs')
-  let g:run_jobs = []
+  let g:run_jobs = {}
 endif
 if !exists('g:run_quiet_default')
   let g:run_quiet_default = 0
@@ -66,7 +66,7 @@ function! Run(cmd, ...)
         \ 'pty': 1 
         \ })
   
-  " get job info for global job list
+  " get job info for global job dict
   let info = job_info(job)
   let pid = info['process']
   let job_obj = {
@@ -76,9 +76,10 @@ function! Run(cmd, ...)
         \ 'filename': fpath,
         \ 'timestamp': timestamp,
         \ 'job': job,
+        \ 'status': 'RUNNING',
         \ 'options': options
         \ }
-  call add(g:run_jobs, job_obj)
+  let g:run_jobs[timestamp] = job_obj
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
 
@@ -98,7 +99,7 @@ endfunction
 
 function! _UpdateRunJobs()
   let g:qf_output = []
-  let run_jobs_sorted = reverse(sort(copy(g:run_jobs), {
+  let run_jobs_sorted = reverse(sort(g:run_jobs->values(), {
         \ v1, v2 -> v1.timestamp == v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
@@ -108,14 +109,17 @@ function! _UpdateRunJobs()
       \ }
     if job_status(val['job']) == 'run'
       let qf_item['bufnr'] = bufnr(val['bufname'])
-      let qf_item['text'] = 'RUNNING'
+      let status = 'RUNNING'
     else
       let qf_item['filename'] = val['filename']
       let exitval = job_info(val['job'])['exitval']
-      let qf_item['text'] = exitval == 0 ? 'DONE' : 'FAIL'
+      let status = exitval == 0 ? 'DONE' : 'FAIL'
     endif
-    let qf_item['text'] = qf_item['text'] . ' - ' . val['command']
+    let qf_item['text'] = status . ' - ' . val['command']
+
+    " update output and global jobs dict
     call add(g:qf_output, qf_item)
+    call extend(g:run_jobs[val['timestamp']], { 'status': status })
   endfor
   call setqflist(g:qf_output)
 endfunction
@@ -135,7 +139,7 @@ endfunction
 
 function! _RunGetJobDetails(job)
   let pid = job_info(a:job)['process']
-  for job in g:run_jobs
+  for job in g:run_jobs->values()
     if job['pid'] == pid
       return job
     endif
