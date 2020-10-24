@@ -5,7 +5,7 @@ let g:loaded_run = 1
 
 " vars
 if !exists('g:run_jobs')
-  let g:run_jobs = {}
+  let g:run_jobs = []
 endif
 if !exists('g:run_quiet_default')
   let g:run_quiet_default = 0
@@ -66,7 +66,7 @@ function! Run(cmd, ...)
         \ 'pty': 1 
         \ })
   
-  " get job info for global dict
+  " get job info for global job list
   let info = job_info(job)
   let pid = info['process']
   let job_obj = {
@@ -78,7 +78,7 @@ function! Run(cmd, ...)
         \ 'job': job,
         \ 'options': options
         \ }
-  let g:run_jobs[pid] = job_obj
+  call add(g:run_jobs, job_obj)
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
 
@@ -98,9 +98,11 @@ endfunction
 
 function! _UpdateRunJobs()
   let g:qf_output = []
-  let keys = reverse(sort(g:run_jobs->keys()))
-  for key in keys
-    let val = g:run_jobs[key]
+  let run_jobs_sorted = reverse(sort(copy(g:run_jobs), {
+        \ v1, v2 -> v1.timestamp == v2.timestamp ? 0 
+        \ : v1.timestamp > v2.timestamp ? 1 : -1
+        \ }))
+  for val in run_jobs_sorted
     let qf_item = {
       \ 'lnum': 1
       \ }
@@ -110,11 +112,7 @@ function! _UpdateRunJobs()
     else
       let qf_item['filename'] = val['filename']
       let exitval = job_info(val['job'])['exitval']
-      if exitval == 0
-        let qf_item['text'] = 'DONE'
-      else
-        let qf_item['text'] = 'FAIL'
-      endif
+      let qf_item['text'] = exitval == 0 ? 'DONE' : 'FAIL'
     endif
     let qf_item['text'] = qf_item['text'] . ' - ' . val['command']
     call add(g:qf_output, qf_item)
@@ -136,8 +134,13 @@ function! _RunAlertNoFocus(content, ...)
 endfunction
 
 function! _RunGetJobDetails(job)
-  let info = job_info(a:job)
-  return g:run_jobs[info['process']]
+  let pid = job_info(a:job)['process']
+  for job in g:run_jobs
+    if job['pid'] == pid
+      return job
+    endif
+  endfor
+  echoerr 'Job ' . pid . ' not found.'
 endfunction
 
 
