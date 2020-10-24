@@ -10,6 +10,9 @@ endif
 if !exists('g:run_quiet')
   let g:run_quiet = 0
 endif
+if !exists('g:runcmdpath')
+  let g:runcmdpath = '/tmp/vim-run-cmd'
+endif
 if !exists('g:rundir')
   let g:rundir = $HOME . '/.vim/rundir'
 endif
@@ -24,7 +27,7 @@ command RunList :call RunList()
 
 " main functions
 function! RunList()
-  call _UpdateRunJobs
+  call _UpdateRunJobs()
   copen
 endfunction
 
@@ -34,7 +37,12 @@ function! Run(cmd)
   let fname = '/' . timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . fname
   let temppath = '/tmp' . fname
-  let job = job_start(a:cmd, {
+  
+  " run job as shell command to tempfile
+  execute 'redir! > ' . g:runcmdpath
+  silent echo a:cmd
+  redir END
+  let job = job_start($SHELL . ' ' . g:runcmdpath, {
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
