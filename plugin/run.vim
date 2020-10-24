@@ -10,9 +10,6 @@ endif
 if !exists('g:run_quiet')
   let g:run_quiet = 0
 endif
-if !exists('g:runcmdpath')
-  let g:runcmdpath = '/tmp/vim-run-cmd'
-endif
 if !exists('g:rundir')
   let g:rundir = $HOME . '/.vim/rundir'
 endif
@@ -21,7 +18,7 @@ if !isdirectory(g:rundir)
 endif
 
 " commands
-command -nargs=* Run :call Run(<q-args>)
+command -nargs=* -complete=file Run :call Run(<q-args>)
 command RunList :call RunList()
 
 
@@ -32,17 +29,22 @@ function! RunList()
 endfunction
 
 function! Run(cmd)
+  if len(trim(a:cmd)) == 0
+    echoerr 'Please provide a command.'
+    return
+  endif
+  let runcmdpath = trim(system('mktemp'))
   let timestamp = strftime('%Y%m%d_%H%M%S')
   let shortcmd = _CleanCmdName(a:cmd)
-  let fname = '/' . timestamp . '__' . shortcmd . '.log'
-  let fpath = g:rundir . fname
-  let temppath = '/tmp' . fname
+  let fname = timestamp . '__' . shortcmd . '.log'
+  let fpath = g:rundir . '/' . fname
+  let temppath = '/tmp/vim-run.' . timestamp . '.log'
   
   " run job as shell command to tempfile
-  execute 'redir! > ' . g:runcmdpath
+  execute 'redir! > ' . runcmdpath
   silent echo a:cmd
   redir END
-  let job = job_start($SHELL . ' ' . g:runcmdpath, {
+  let job = job_start($SHELL . ' ' . runcmdpath, {
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
@@ -58,7 +60,6 @@ function! Run(cmd)
         \ 'bufname': temppath,
         \ 'filename': fpath,
         \ 'timestamp': timestamp,
-        \ 'info': info,
         \ 'job': job,
         \ }
   let g:run_jobs[pid] = job_obj
@@ -92,8 +93,14 @@ function! _UpdateRunJobs()
       let qf_item['text'] = 'RUNNING'
     else
       let qf_item['filename'] = val['filename']
-      let qf_item['text'] = 'DONE'
+      let exitval = job_info(val['job'])['exitval']
+      if exitval == 0
+        let qf_item['text'] = 'DONE'
+      else
+        let qf_item['text'] = 'FAIL'
+      endif
     endif
+    let qf_item['text'] = qf_item['text'] . ' - ' . val['command']
     call add(g:qf_output, qf_item)
   endfor
   call setqflist(g:qf_output)
@@ -124,7 +131,6 @@ endfunction
 
 function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
-  let pid = job_info(job)['process']
   let info = _RunGetJobDetails(job)
   call _RunAlertNoFocus('[' . info['timestamp'] . '] completed, run :RunList to view.')
 endfunction
