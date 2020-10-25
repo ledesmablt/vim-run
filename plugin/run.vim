@@ -35,9 +35,9 @@ command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command -nargs=* -complete=file RunWatch :call RunWatch(<q-args>)
 command RunAgain :call RunAgain()
 command RunList :call RunList()
-command RunClear :call RunClear(['DONE', 'FAIL', 'KILLED'])
+command RunClear :call RunClear(['DONE', 'FAILED', 'KILLED'])
 command RunClearDone :call RunClear(['DONE'])
-command RunClearFail :call RunClear(['FAIL', 'KILLED'])
+command RunClearFailed :call RunClear(['FAILED', 'KILLED'])
 command RunClearKilled :call RunClear(['KILLED'])
 command -nargs=1 -complete=custom,_ListRunningJobs RunKill :call RunKill(<q-args>)
 command RunKillAll :call RunKillAll()
@@ -222,7 +222,7 @@ function! _UpdateRunJobs()
     else
       let qf_item['filename'] = val['filename']
       let exitval = job_info(val['job'])['exitval']
-      let status = exitval == 0 ? 'DONE' : exitval == -1 ? 'KILLED' : 'FAIL'
+      let status = exitval == 0 ? 'DONE' : exitval == -1 ? 'KILLED' : 'FAILED'
     endif
     let qf_item['text'] = status . ' - ' . val['command']
 
