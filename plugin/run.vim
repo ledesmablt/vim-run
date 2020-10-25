@@ -32,9 +32,11 @@ command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command -nargs=* -complete=file RunWatch :call RunWatch(<q-args>)
 command RunAgain :call RunAgain()
 command RunList :call RunList()
-command RunClear :call RunClear(['DONE', 'FAIL'])
+command RunClear :call RunClear(['DONE', 'FAIL', 'KILLED'])
 command RunClearDone :call RunClear(['DONE'])
-command RunClearFail :call RunClear(['FAIL'])
+command RunClearFail :call RunClear(['FAIL', 'KILLED'])
+command RunClearKilled :call RunClear(['KILLED'])
+command -nargs=1 -complete=custom,_ListRunningJobs RunKill :call RunKill(<q-args>)
 
 
 " main functions
@@ -63,6 +65,20 @@ function! RunClear(status_list)
     endif
   endfor
   call _RunAlertNoFocus('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
+endfunction
+
+function! RunKill(job_key)
+  if !has_key(g:run_jobs, a:job_key)
+    echoerr 'Job key not found.'
+    return
+  endif
+  let job = g:run_jobs[a:job_key]
+  if job['status'] != 'RUNNING'
+    echom 'Job already finished.'
+  else
+    let job['status'] = 'KILLED'
+    call job_stop(job['job'], 'kill')
+  endif
 endfunction
 
 function! RunQuiet(cmd)
@@ -147,6 +163,11 @@ endfunction
 
 
 " utility
+function! _ListRunningJobs(A,L,P)
+  return copy(g:run_jobs)->filter('v:val.status == "RUNNING"')
+        \ ->keys()->join("\n")
+endfunction
+
 function! _IsQFOpen()
   return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") == "qf"')) > 0
 endfunction
@@ -172,7 +193,7 @@ function! _UpdateRunJobs()
     else
       let qf_item['filename'] = val['filename']
       let exitval = job_info(val['job'])['exitval']
-      let status = exitval == 0 ? 'DONE' : 'FAIL'
+      let status = exitval == 0 ? 'DONE' : exitval == -1 ? 'KILLED' : 'FAIL'
     endif
     let qf_item['text'] = status . ' - ' . val['command']
 
@@ -219,6 +240,10 @@ endfunction
 function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
-  let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
-  call _RunAlertNoFocus(msg, info['options'])
+  if info['status'] == 'KILLED'
+    call _RunAlertNoFocus('Job ' . info['timestamp'] . ' killed.', {'quiet': 1})
+  else
+    let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
+    call _RunAlertNoFocus(msg, info['options'])
+  endif
 endfunction
