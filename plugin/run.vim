@@ -50,7 +50,7 @@ function! RunClear(status_list)
       let clear_count = clear_count + 1
     endif
   endfor
-  call _RunAlertNoFocus('Cleared ' . clear_count . ' jobs.')
+  call _RunAlertNoFocus('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
 endfunction
 
 function! RunQuiet(cmd)
