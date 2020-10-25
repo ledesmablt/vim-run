@@ -22,6 +22,9 @@ endif
 if !exists('g:runcmdpath')
   let g:runcmdpath = '/tmp/vim-run-cmd'
 endif
+if !exists('g:run_killall_ongoing')
+  let g:run_killall_ongoing = 0
+endif
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
@@ -37,6 +40,7 @@ command RunClearDone :call RunClear(['DONE'])
 command RunClearFail :call RunClear(['FAIL', 'KILLED'])
 command RunClearKilled :call RunClear(['KILLED'])
 command -nargs=1 -complete=custom,_ListRunningJobs RunKill :call RunKill(<q-args>)
+command RunKillAll :call RunKillAll()
 
 
 " main functions
@@ -74,11 +78,33 @@ function! RunKill(job_key)
   endif
   let job = g:run_jobs[a:job_key]
   if job['status'] != 'RUNNING'
-    echom 'Job already finished.'
+    if !g:run_killall_ongoing
+      echom 'Job already finished.'
+    endif
+    return 0
   else
     let job['status'] = 'KILLED'
     call job_stop(job['job'], 'kill')
+    return 1
   endif
+endfunction
+
+function! RunKillAll()
+  " user confirm
+  let confirm = input('Kill all running jobs? (Y/n) ')
+  if toupper(confirm) != 'Y'
+    return
+  endif
+  let running_jobs = _ListRunningJobs()->split("\n")
+  let killed_jobs = 0
+  let g:run_killall_ongoing = 1
+  for job_key in running_jobs
+    let is_killed = RunKill(job_key)
+    let killed_jobs += is_killed
+  endfor
+  let msg = killed_jobs . ' jobs killed.'
+  let g:run_killall_ongoing = 0
+  call _RunAlertNoFocus(msg, {'quiet': 1})
 endfunction
 
 function! RunQuiet(cmd)
@@ -163,7 +189,7 @@ endfunction
 
 
 " utility
-function! _ListRunningJobs(A,L,P)
+function! _ListRunningJobs(...)
   return copy(g:run_jobs)->filter('v:val.status == "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
@@ -238,6 +264,9 @@ function! _RunOutCB(channel, msg)
 endfunction
 
 function! _RunCloseCB(channel)
+  if g:run_killall_ongoing
+    return
+  endif
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
   if info['status'] == 'KILLED'
