@@ -3,10 +3,15 @@
 Run, view, and manage UNIX shell commands with ease from your favorite code editor.
 (a work in progress)
 
-%%insert image demo here
+<!-- insert gif demo here -->
 
 ## Installation
-Install using your favorite package manager, or use Vim's built-in package support:
+Using [vim-plug](https://github.com/junegunn/vim-plug):
+```vim
+Plug 'ledesmablt/vim-run'
+```
+
+Using Vim's built-in package support:
 ```bash
 mkdir -p ~/.vim/pack/plugins/start
 cd ~/.vim/pack/plugins/start
@@ -15,11 +20,21 @@ vim -c 'helptags vim-run/doc' -c quit
 ```
 
 ## Commands
-```
+```vim
+" start jobs
 :Run {command}
 :RunQuiet {command}
+:RunWatch {command}
+:RunAgain
+
+" kill jobs
+:RunKill {job_key}
+:RunKillAll
+
+" view & manage jobs
 :RunList
 :RunClear
 :RunClearDone
-:RunClearFail
+:RunClearFailed
+:RunClearKilled
 ```
