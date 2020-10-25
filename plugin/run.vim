@@ -41,6 +41,7 @@ command RunClearFailed :call RunClear(['FAILED', 'KILLED'])
 command RunClearKilled :call RunClear(['KILLED'])
 command -nargs=1 -complete=custom,_ListRunningJobs RunKill :call RunKill(<q-args>)
 command RunKillAll :call RunKillAll()
+command RunDeleteLogs :call RunDeleteLogs()
 
 
 " main functions
@@ -94,16 +95,35 @@ endfunction
 
 function! RunKillAll()
   " user confirm
+  let running_jobs = _ListRunningJobs()->split("\n")
+  if len(running_jobs) == 0
+    call _PrintWarning('No jobs are running.')
+    return
+  endif
+
   let confirm = input('Kill all running jobs? (Y/n) ')
   if toupper(confirm) != 'Y'
     return
   endif
-  let running_jobs = _ListRunningJobs()->split("\n")
   let s:run_killed_jobs = 0
   let s:run_killall_ongoing = len(running_jobs)
   for job_key in running_jobs
     call RunKill(job_key)
   endfor
+endfunction
+
+function! RunDeleteLogs()
+  " user confirm
+  if len(_ListRunningJobs()) > 0
+    call _PrintError('Cannot delete logs while jobs are running.')
+    return
+  endif
+  let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
+  if toupper(confirm) != 'Y'
+    return
+  endif
+  call system('rm ' . g:rundir . '/*.log')
+  redraw | echom 'Deleted all logs.'
 endfunction
 
 function! RunQuiet(cmd)
