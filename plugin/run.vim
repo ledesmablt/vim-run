@@ -22,8 +22,8 @@ endif
 if !exists('g:runcmdpath')
   let g:runcmdpath = '/tmp/vim-run-cmd'
 endif
-if !exists('g:run_killall_ongoing')
-  let g:run_killall_ongoing = 0
+if !exists('s:run_killall_ongoing')
+  let s:run_killall_ongoing = 0
 endif
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
@@ -78,12 +78,11 @@ function! RunKill(job_key)
   endif
   let job = g:run_jobs[a:job_key]
   if job['status'] != 'RUNNING'
-    if !g:run_killall_ongoing
+    if !s:run_killall_ongoing
       echom 'Job already finished.'
     endif
     return 0
   else
-    let job['status'] = 'KILLED'
     call job_stop(job['job'], 'kill')
     return 1
   endif
@@ -96,15 +95,11 @@ function! RunKillAll()
     return
   endif
   let running_jobs = _ListRunningJobs()->split("\n")
-  let killed_jobs = 0
-  let g:run_killall_ongoing = 1
+  let s:run_killed_jobs = 0
+  let s:run_killall_ongoing = len(running_jobs)
   for job_key in running_jobs
     let is_killed = RunKill(job_key)
-    let killed_jobs += is_killed
   endfor
-  let msg = killed_jobs . ' jobs killed.'
-  let g:run_killall_ongoing = 0
-  call _RunAlertNoFocus(msg, {'quiet': 1})
 endfunction
 
 function! RunQuiet(cmd)
@@ -264,12 +259,28 @@ function! _RunOutCB(channel, msg)
 endfunction
 
 function! _RunCloseCB(channel)
-  if g:run_killall_ongoing
-    return
-  endif
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
-  if info['status'] == 'KILLED'
+  let exitval = job_info(info['job'])['exitval']
+
+  if s:run_killall_ongoing
+    if exitval != -1
+      " no output if killall ongoing
+      return
+    endif
+    let s:run_killed_jobs += 1
+
+    " killall finished
+    if s:run_killed_jobs == s:run_killall_ongoing
+      let s:run_killall_ongoing = 0
+      let msg = s:run_killed_jobs . ' jobs killed.'
+      call _RunAlertNoFocus(msg, {'quiet': 1})
+    endif
+    return
+  endif
+
+  " job stop message
+  if exitval == -1
     call _RunAlertNoFocus('Job ' . info['timestamp'] . ' killed.', {'quiet': 1})
   else
     let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
