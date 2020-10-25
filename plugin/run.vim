@@ -10,6 +10,12 @@ endif
 if !exists('g:run_quiet_default')
   let g:run_quiet_default = 0
 endif
+if !exists('g:run_last_command')
+  let g:run_last_command = ''
+endif
+if !exists('g:run_last_options')
+  let g:run_last_options = {}
+endif
 if !exists('g:rundir')
   let g:rundir = $HOME . '/.vim/rundir'
 endif
@@ -21,10 +27,11 @@ endif
 command -nargs=* -complete=file Run :call Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command -nargs=* -complete=file RunWatch :call RunWatch(<q-args>)
+command RunAgain :call RunAgain()
 command RunList :call RunList()
-command -nargs=0 RunClear :call RunClear(['DONE', 'FAIL'])
-command -nargs=0 RunClearDone :call RunClear(['DONE'])
-command -nargs=0 RunClearFail :call RunClear(['FAIL'])
+command RunClear :call RunClear(['DONE', 'FAIL'])
+command RunClearDone :call RunClear(['DONE'])
+command RunClearFail :call RunClear(['FAIL'])
 
 
 " main functions
@@ -59,7 +66,15 @@ function! RunQuiet(cmd)
 endfunction
 
 function! RunWatch(cmd)
-  call Run(a:cmd, { 'watch': 1 })
+  call Run(a:cmd, { 'watch': 1, 'quiet': 1 })
+endfunction
+
+function! RunAgain()
+  if len(g:run_last_command) == 0
+    echoerr 'Please run a command first.'
+    return
+  endif
+  call Run(g:run_last_command, g:run_last_options)
 endfunction
 
 function! Run(cmd, ...)
@@ -74,6 +89,8 @@ function! Run(cmd, ...)
   if type(options) != 4
     let options = {}
   endif
+  let g:run_last_command = a:cmd
+  let g:run_last_options = options
 
   let runcmdpath = trim(system('mktemp'))
   let timestamp = strftime('%Y%m%d_%H%M%S')
