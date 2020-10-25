@@ -20,6 +20,7 @@ endif
 " commands
 command -nargs=* -complete=file Run :call Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
+command -nargs=* -complete=file RunWatch :call RunWatch(<q-args>)
 command RunList :call RunList()
 command -nargs=0 RunClear :call RunClear(['DONE', 'FAIL'])
 command -nargs=0 RunClearDone :call RunClear(['DONE'])
@@ -55,6 +56,10 @@ endfunction
 
 function! RunQuiet(cmd)
   call Run(a:cmd, { 'quiet': 1 })
+endfunction
+
+function! RunWatch(cmd)
+  call Run(a:cmd, { 'watch': 1 })
 endfunction
 
 function! Run(cmd, ...)
@@ -107,6 +112,9 @@ function! Run(cmd, ...)
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
 
+  if has_key(options, 'watch')
+    exec 'e ' . temppath
+  endif
   call _RunAlertNoFocus(msg, options)
 endfunction
 
@@ -185,9 +193,5 @@ function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
   let info = _RunGetJobDetails(job)
   let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
-  let todel = bufnr(info.bufname)
-  if todel != bufnr('%')
-    exec 'bd ' . todel
-  endif
   call _RunAlertNoFocus(msg, info['options'])
 endfunction
