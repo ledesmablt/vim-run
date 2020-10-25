@@ -45,8 +45,12 @@ command RunKillAll :call RunKillAll()
 
 " main functions
 function! RunList()
-  call _UpdateRunJobs()
-  copen
+  if _IsQFOpen()
+    cclose
+  else
+    call _UpdateRunJobs()
+    copen
+  endif
 endfunction
 
 function! RunClear(status_list)
@@ -65,7 +69,7 @@ function! RunClear(status_list)
     if status_match
       exec 'bd! ' . job['bufname']
       unlet g:run_jobs[job['timestamp']]
-      let clear_count = clear_count + 1
+      let clear_count += 1
     endif
   endfor
   call _RunAlertNoFocus('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
@@ -98,7 +102,7 @@ function! RunKillAll()
   let s:run_killed_jobs = 0
   let s:run_killall_ongoing = len(running_jobs)
   for job_key in running_jobs
-    let is_killed = RunKill(job_key)
+    call RunKill(job_key)
   endfor
 endfunction
 
