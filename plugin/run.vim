@@ -19,6 +19,9 @@ endif
 if !exists('g:rundir')
   let g:rundir = $HOME . '/.vim/rundir'
 endif
+if !exists('g:runcmdpath')
+  let g:runcmdpath = '/tmp/vim-run-cmd'
+endif
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
@@ -54,6 +57,7 @@ function! RunClear(status_list)
   for job in g:run_jobs->values()
     let status_match = a:status_list->index(job['status']) >= 0
     if status_match
+      exec 'bd! ' . job['bufname']
       unlet g:run_jobs[job['timestamp']]
       let clear_count = clear_count + 1
     endif
@@ -92,18 +96,24 @@ function! Run(cmd, ...)
   let g:run_last_command = a:cmd
   let g:run_last_options = options
 
-  let runcmdpath = trim(system('mktemp'))
   let timestamp = strftime('%Y%m%d_%H%M%S')
   let shortcmd = _CleanCmdName(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
   let temppath = '/tmp/vim-run.' . timestamp . '.log'
+  let execpath = g:runcmdpath . '-exec'
   
-  " run job as shell command to tempfile
-  execute 'redir! > ' . runcmdpath
+  " run job as shell command to tempfile w/ details
+  execute 'redir! > ' . g:runcmdpath
   silent echo a:cmd
   redir END
-  let job = job_start($SHELL . ' ' . runcmdpath, {
+  execute 'redir! > ' . execpath
+  silent echo 'printf COMMAND:\ '
+  silent echo 'cat ' .  g:runcmdpath . ' | tail -n +2'
+  silent echo 'printf "\n\n"'
+  silent echo  $SHELL . ' ' . g:runcmdpath 
+  redir END
+  let job = job_start([$SHELL, execpath]->join(' '), {
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
@@ -199,8 +209,8 @@ endfunction
 
 " callbacks
 function! _RunOutCB(channel, msg)
-  let job = ch_getjob(a:channel)
-  let fname = _RunGetJobDetails(job)['filename']
+  let job = _RunGetJobDetails(ch_getjob(a:channel))
+  let fname = job['filename']
   execute 'redir >> ' . fname
   silent echo a:msg
   redir END
