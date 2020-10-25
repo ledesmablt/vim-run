@@ -77,7 +77,7 @@ endfunction
 
 function! RunKill(job_key)
   if !has_key(g:run_jobs, a:job_key)
-    echoerr 'Job key not found.'
+    call _PrintError('Job key not found.')
     return
   endif
   let job = g:run_jobs[a:job_key]
@@ -116,7 +116,7 @@ endfunction
 
 function! RunAgain()
   if len(g:run_last_command) == 0
-    echoerr 'Please run a command first.'
+    call _PrintError('Please run a command first.')
     return
   endif
   call Run(g:run_last_command, g:run_last_options)
@@ -125,7 +125,7 @@ endfunction
 function! Run(cmd, ...)
   " check if command provided
   if len(trim(a:cmd)) == 0
-    echoerr 'Please provide a command.'
+    call _PrintError('Please provide a command.')
     return
   endif
 
@@ -138,6 +138,10 @@ function! Run(cmd, ...)
   let g:run_last_options = options
 
   let timestamp = strftime('%Y%m%d_%H%M%S')
+  if has_key(g:run_jobs, timestamp)
+    call _PrintError('Please wait at least 1 second before starting a new job.')
+    return
+  endif
   let shortcmd = _CleanCmdName(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
@@ -242,20 +246,27 @@ function! _RunAlertNoFocus(content, ...)
   redraw | echom a:content
 endfunction
 
-function! _RunGetJobDetails(job)
+function! _GetJobWithObject(job)
   let pid = job_info(a:job)['process']
   for job in g:run_jobs->values()
     if job['pid'] == pid
       return job
     endif
   endfor
-  echoerr 'Job ' . pid . ' not found.'
+endfunction
+
+function! _PrintError(msg, ...)
+  echohl ErrorMsg | echomsg a:msg | echohl None
+endfunction
+
+function! _PrintWarning(msg, ...)
+  echohl WarningMsg | echomsg a:msg | echohl None
 endfunction
 
 
 " callbacks
 function! _RunOutCB(channel, msg)
-  let job = _RunGetJobDetails(ch_getjob(a:channel))
+  let job = _GetJobWithObject(ch_getjob(a:channel))
   let fname = job['filename']
   execute 'redir >> ' . fname
   silent echo a:msg
@@ -264,12 +275,12 @@ endfunction
 
 function! _RunCloseCB(channel)
   let job = ch_getjob(a:channel)
-  let info = _RunGetJobDetails(job)
+  let info = _GetJobWithObject(job)
   let exitval = job_info(info['job'])['exitval']
 
   if s:run_killall_ongoing
     if exitval != -1
-      " no output if killall ongoing
+      " no action if killall ongoing
       return
     endif
     let s:run_killed_jobs += 1
@@ -277,7 +288,8 @@ function! _RunCloseCB(channel)
     " killall finished
     if s:run_killed_jobs == s:run_killall_ongoing
       let s:run_killall_ongoing = 0
-      let msg = s:run_killed_jobs . ' jobs killed.'
+      let msg = s:run_killed_jobs . 
+            \ (s:run_killed_jobs > 1 ? ' jobs killed.' : ' job killed.')
       call _RunAlertNoFocus(msg, {'quiet': 1})
     endif
     return
