@@ -161,8 +161,9 @@ function! Run(cmd, ...)
   " run job as shell command to tempfile w/ details
   call writefile([a:cmd], g:runcmdpath)
   call writefile([
-        \ 'printf COMMAND:\ ',
-        \ 'cat ' .  g:runcmdpath,
+        \ 'printf COMMAND:\ ', 'cat ' .  g:runcmdpath,
+        \ 'echo WORKDIR: ' . getcwd(),
+        \ 'echo STARTED: ' . strftime('%Y-%m-%d %H:%M:%S'),
         \ 'printf "\n"',
         \ $SHELL . ' ' . g:runcmdpath
         \], execpath)
