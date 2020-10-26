@@ -23,6 +23,11 @@ if !isdirectory('/tmp')
   finish
 endif
 
+" user vars
+let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
+let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
+let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
+
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call run#RunQuiet(<q-args>)

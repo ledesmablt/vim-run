@@ -3,18 +3,13 @@ if exists('s:loaded_run')
 endif
 let s:loaded_run = 1
 
-" user vars
-let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
-let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
-let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
-
 " script vars
 let s:run_jobs                = get(s:, 'run_jobs', {})
 let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 
-" init
+" init rundir
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
