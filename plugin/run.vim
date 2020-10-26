@@ -3,28 +3,18 @@ if exists('g:loaded_run') || &compatible
 endif
 let g:loaded_run = 1
 
-" vars
-if !exists('g:run_jobs')
-  let g:run_jobs = {}
-endif
-if !exists('g:run_quiet_default')
-  let g:run_quiet_default = 0
-endif
-if !exists('g:run_last_command')
-  let g:run_last_command = ''
-endif
-if !exists('g:run_last_options')
-  let g:run_last_options = {}
-endif
-if !exists('g:rundir')
-  let g:rundir = $HOME . '/.vim/rundir'
-endif
-if !exists('g:runcmdpath')
-  let g:runcmdpath = '/tmp/vim-run-cmd'
-endif
-if !exists('s:run_killall_ongoing')
-  let s:run_killall_ongoing = 0
-endif
+" user vars
+let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
+let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
+let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
+
+" script vars
+let s:run_jobs                = get(s:, 'run_jobs', {})
+let s:run_last_command        = get(s:, 'run_last_command', '')
+let s:run_last_options        = get(s:, 'run_last_options', {})
+let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
+
+" init
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
@@ -65,11 +55,11 @@ function! RunClear(status_list)
 
   " remove all jobs that match status_list
   let clear_count = 0
-  for job in g:run_jobs->values()
+  for job in s:run_jobs->values()
     let status_match = a:status_list->index(job['status']) >= 0
     if status_match
       exec 'bd! ' . job['bufname']
-      unlet g:run_jobs[job['timestamp']]
+      unlet s:run_jobs[job['timestamp']]
       let clear_count += 1
     endif
   endfor
@@ -77,11 +67,11 @@ function! RunClear(status_list)
 endfunction
 
 function! RunKill(job_key)
-  if !has_key(g:run_jobs, a:job_key)
+  if !has_key(s:run_jobs, a:job_key)
     call _PrintError('Job key not found.')
     return
   endif
-  let job = g:run_jobs[a:job_key]
+  let job = s:run_jobs[a:job_key]
   if job['status'] !=# 'RUNNING'
     if !s:run_killall_ongoing
       echom 'Job already finished.'
@@ -135,11 +125,11 @@ function! RunWatch(cmd)
 endfunction
 
 function! RunAgain()
-  if len(g:run_last_command) ==# 0
+  if len(s:run_last_command) ==# 0
     call _PrintError('Please run a command first.')
     return
   endif
-  call Run(g:run_last_command, g:run_last_options)
+  call Run(s:run_last_command, s:run_last_options)
 endfunction
 
 function! Run(cmd, ...)
@@ -154,11 +144,11 @@ function! Run(cmd, ...)
   if type(options) != 4
     let options = {}
   endif
-  let g:run_last_command = a:cmd
-  let g:run_last_options = options
+  let s:run_last_command = a:cmd
+  let s:run_last_options = options
 
   let timestamp = strftime('%Y%m%d_%H%M%S')
-  if has_key(g:run_jobs, timestamp)
+  if has_key(s:run_jobs, timestamp)
     call _PrintError('Please wait at least 1 second before starting a new job.')
     return
   endif
@@ -170,13 +160,13 @@ function! Run(cmd, ...)
   
   " run job as shell command to tempfile w/ details
   execute 'redir! > ' . g:runcmdpath
-  silent echo a:cmd
+    silent echo a:cmd
   redir END
   execute 'redir! > ' . execpath
-  silent echo 'printf COMMAND:\ '
-  silent echo 'cat ' .  g:runcmdpath . ' | tail -n +2'
-  silent echo 'printf "\n\n"'
-  silent echo  $SHELL . ' ' . g:runcmdpath 
+    silent echo 'printf COMMAND:\ '
+    silent echo 'cat ' .  g:runcmdpath . ' | tail -n +2'
+    silent echo 'printf "\n\n"'
+    silent echo  $SHELL . ' ' . g:runcmdpath 
   redir END
   let job = job_start([$SHELL, execpath]->join(' '), {
         \ 'cwd': getcwd(),
@@ -200,7 +190,7 @@ function! Run(cmd, ...)
         \ 'status': 'RUNNING',
         \ 'options': options
         \ }
-  let g:run_jobs[timestamp] = job_obj
+  let s:run_jobs[timestamp] = job_obj
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
 
@@ -213,7 +203,7 @@ endfunction
 
 " utility
 function! _ListRunningJobs(...)
-  return copy(g:run_jobs)->filter('v:val.status ==# "RUNNING"')
+  return copy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
 
@@ -228,7 +218,7 @@ endfunction
 
 function! _UpdateRunJobs()
   let g:qf_output = []
-  let run_jobs_sorted = reverse(sort(g:run_jobs->values(), {
+  let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
@@ -248,7 +238,7 @@ function! _UpdateRunJobs()
 
     " update output and global jobs dict
     call add(g:qf_output, qf_item)
-    call extend(g:run_jobs[val['timestamp']], { 'status': status })
+    call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
   call setqflist(g:qf_output)
 endfunction
@@ -268,7 +258,7 @@ endfunction
 
 function! _GetJobWithObject(job)
   let pid = job_info(a:job)['process']
-  for job in g:run_jobs->values()
+  for job in s:run_jobs->values()
     if job['pid'] ==# pid
       return job
     endif
@@ -289,7 +279,7 @@ function! _RunOutCB(channel, msg)
   let job = _GetJobWithObject(ch_getjob(a:channel))
   let fname = job['filename']
   execute 'redir >> ' . fname
-  silent echo a:msg
+    silent echo a:msg
   redir END
 endfunction
 
