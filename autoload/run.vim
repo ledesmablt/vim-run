@@ -58,8 +58,11 @@ function! run#Run(cmd, ...)
         \ date_cmd,
         \ 'printf "\n"',
         \ $SHELL . ' ' . g:runcmdpath,
-        \ 'printf "\nFINISHED: "',
+        \ 'EXITVAL=$?',
+        \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
+        \ 'printf "\n$STATUS: "',
         \ date_cmd,
+        \ 'exit $EXITVAL',
         \], execpath)
   let job = job_start([$SHELL, execpath]->join(' '), {
         \ 'cwd': getcwd(),
