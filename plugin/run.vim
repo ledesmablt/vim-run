@@ -159,15 +159,13 @@ function! Run(cmd, ...)
   let execpath = g:runcmdpath . '-exec'
   
   " run job as shell command to tempfile w/ details
-  execute 'redir! > ' . g:runcmdpath
-    silent echo a:cmd
-  redir END
-  execute 'redir! > ' . execpath
-    silent echo 'printf COMMAND:\ '
-    silent echo 'cat ' .  g:runcmdpath . ' | tail -n +2'
-    silent echo 'printf "\n\n"'
-    silent echo  $SHELL . ' ' . g:runcmdpath 
-  redir END
+  call writefile([a:cmd], g:runcmdpath)
+  call writefile([
+        \ 'printf COMMAND:\ ',
+        \ 'cat ' .  g:runcmdpath,
+        \ 'printf "\n"',
+        \ $SHELL . ' ' . g:runcmdpath
+        \], execpath)
   let job = job_start([$SHELL, execpath]->join(' '), {
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': temppath,
@@ -274,9 +272,7 @@ endfunction
 function! _RunOutCB(channel, msg)
   let job = _GetJobWithObject(ch_getjob(a:channel))
   let fname = job['filename']
-  silent exec 'redir >> ' . fname
-    silent echo a:msg
-  redir END
+  call writefile([a:msg], fname, "a")
 endfunction
 
 function! _RunCloseCB(channel)
