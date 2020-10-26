@@ -1,12 +1,28 @@
-if exists('g:loaded_run') || &compatible
+if exists('g:loaded_run')
   " finish
 endif
 let g:loaded_run = 1
 
+" conditions for plugin to work correctly
+if len($SHELL) == 0
+  echoerr 'Could not load vim-run - $SHELL environment variable missing.'
+  finish
+endif
+if len($HOME) == 0 && !exists('g:rundir')
+  echoerr "Could not load vim-run - $HOME environment variable missing."
+        \ . " You may assign a directory to the variable g:rundir"
+        \ . " to fix this issue."
+  finish
+endif
+if !isdirectory('/tmp')
+  echoerr 'Could not load vim-run - /tmp directory not detected.'
+  finish
+endif
+
 " user vars
-let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
 let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
+let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
 
 " script vars
 let s:run_jobs                = get(s:, 'run_jobs', {})
