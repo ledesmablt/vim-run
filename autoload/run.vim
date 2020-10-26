@@ -21,10 +21,10 @@ endif
 
 " main functions
 function! run#RunListToggle()
-  if run#_IsQFOpen()
+  if run#is_qf_open()
     cclose
   else
-    call run#_UpdateRunJobs()
+    call run#update_run_jobs()
     silent copen
   endif
 endfunction
@@ -48,12 +48,12 @@ function! run#RunClear(status_list)
       let clear_count += 1
     endif
   endfor
-  call run#_RunAlertNoFocus('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
+  call run#alert_and_update('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
 endfunction
 
 function! run#RunKill(job_key)
   if !has_key(s:run_jobs, a:job_key)
-    call run#_PrintFormatted('ErrorMsg', 'Job key not found.')
+    call run#print_formatted('ErrorMsg', 'Job key not found.')
     return
   endif
   let job = s:run_jobs[a:job_key]
@@ -70,9 +70,9 @@ endfunction
 
 function! run#RunKillAll()
   " user confirm
-  let running_jobs = run#_ListRunningJobs()->split("\n")
+  let running_jobs = run#list_running_jobs()->split("\n")
   if len(running_jobs) ==# 0
-    call run#_PrintFormatted('WarningMsg', 'No jobs are running.')
+    call run#print_formatted('WarningMsg', 'No jobs are running.')
     return
   endif
 
@@ -89,8 +89,8 @@ endfunction
 
 function! run#RunDeleteLogs()
   " user confirm
-  if len(run#_ListRunningJobs()) > 0
-    call run#_PrintFormatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
+  if len(run#list_running_jobs()) > 0
+    call run#print_formatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
     return
   endif
   let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
@@ -98,7 +98,7 @@ function! run#RunDeleteLogs()
     return
   endif
   call system('rm ' . g:rundir . '/*.log')
-  call run#_PrintFormatted('WarningMsg', 'Deleted all logs.')
+  call run#print_formatted('WarningMsg', 'Deleted all logs.')
 endfunction
 
 function! run#RunQuiet(cmd)
@@ -111,7 +111,7 @@ endfunction
 
 function! run#RunAgain()
   if len(s:run_last_command) ==# 0
-    call run#_PrintFormatted('ErrorMsg', 'Please run a command first.')
+    call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
   endif
   call run#Run(s:run_last_command, s:run_last_options)
@@ -120,7 +120,7 @@ endfunction
 function! run#Run(cmd, ...)
   " check if command provided
   if len(trim(a:cmd)) ==# 0
-    call run#_PrintFormatted('ErrorMsg', 'Please provide a command.')
+    call run#print_formatted('ErrorMsg', 'Please provide a command.')
     return
   endif
 
@@ -134,10 +134,10 @@ function! run#Run(cmd, ...)
 
   let timestamp = strftime('%Y%m%d_%H%M%S')
   if has_key(s:run_jobs, timestamp)
-    call run#_PrintFormatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
+    call run#print_formatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
     return
   endif
-  let shortcmd = run#_CleanCmdName(a:cmd)
+  let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
   let temppath = '/tmp/vim-run.' . timestamp . '.log'
@@ -156,8 +156,8 @@ function! run#Run(cmd, ...)
         \ 'cwd': getcwd(),
         \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
-        \ 'out_cb': 'run#_RunOutCB',
-        \ 'close_cb': 'run#_RunCloseCB',
+        \ 'out_cb': 'run#out_cb',
+        \ 'close_cb': 'run#close_cb',
         \ 'pty': 1 
         \ })
   
@@ -180,26 +180,26 @@ function! run#Run(cmd, ...)
   if get(options, 'watch')
     exec 'e ' . temppath
   endif
-  call run#_RunAlertNoFocus(msg, options)
+  call run#alert_and_update(msg, options)
 endfunction
 
 
 " utility
-function! run#_ListRunningJobs(...)
+function! run#list_running_jobs(...)
   return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
 
-function! run#_IsQFOpen()
+function! run#is_qf_open()
   return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") ==# "qf"')) > 0
 endfunction
 
-function! run#_CleanCmdName(cmd)
+function! run#clean_cmd_name(cmd)
   " replace dir-breaking chars
   return substitute(split(a:cmd, ' ')[0], '[\/]', '', 'g')
 endfunction
 
-function! run#_UpdateRunJobs()
+function! run#update_run_jobs()
   let g:qf_output = []
   let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
@@ -227,21 +227,21 @@ function! run#_UpdateRunJobs()
   silent call setqflist([], 'a', {'title': 'RunList'})
 endfunction
 
-function! run#_RunAlertNoFocus(content, ...)
+function! run#alert_and_update(content, ...)
   let options = get(a:, 1, 0)
   if type(options) != 4
     let options = {}
   endif
 
-  call run#_UpdateRunJobs()
-  if (!g:run_quiet_default || run#_IsQFOpen()) && !get(options, 'quiet')
+  call run#update_run_jobs()
+  if (!g:run_quiet_default || run#is_qf_open()) && !get(options, 'quiet')
     silent copen
   endif
   let msg_format = get(options, 'msg_format', 'Normal')
-  call run#_PrintFormatted(msg_format, a:content)
+  call run#print_formatted(msg_format, a:content)
 endfunction
 
-function! run#_GetJobWithObject(job)
+function! run#get_job_with_object(job)
   let pid = job_info(a:job)['process']
   for job in s:run_jobs->values()
     if job['pid'] ==# pid
@@ -250,21 +250,21 @@ function! run#_GetJobWithObject(job)
   endfor
 endfunction
 
-function! run#_PrintFormatted(format, msg)
+function! run#print_formatted(format, msg)
   exec 'redraw | echohl ' . a:format . ' | echomsg a:msg | echohl None'
 endfunction
 
 
 " callbacks
-function! run#_RunOutCB(channel, msg)
-  let job = run#_GetJobWithObject(ch_getjob(a:channel))
+function! run#out_cb(channel, msg)
+  let job = run#get_job_with_object(ch_getjob(a:channel))
   let fname = job['filename']
   call writefile([a:msg], fname, "a")
 endfunction
 
-function! run#_RunCloseCB(channel)
+function! run#close_cb(channel)
   let job = ch_getjob(a:channel)
-  let info = run#_GetJobWithObject(job)
+  let info = run#get_job_with_object(job)
   let exitval = job_info(info['job'])['exitval']
 
   let kill_options = {'quiet': 1, 'msg_format': 'WarningMsg'}
@@ -280,7 +280,7 @@ function! run#_RunCloseCB(channel)
       let s:run_killall_ongoing = 0
       let msg = s:run_killed_jobs . 
             \ (s:run_killed_jobs > 1 ? ' jobs killed.' : ' job killed.')
-      call run#_RunAlertNoFocus(msg, kill_options)
+      call run#alert_and_update(msg, kill_options)
     endif
     return
   endif
@@ -297,5 +297,5 @@ function! run#_RunCloseCB(channel)
     let msg = '[' . info['timestamp'] . '] failed.'
     let options['msg_format'] = 'Red'
   endif
-  call run#_RunAlertNoFocus(msg, options)
+  call run#alert_and_update(msg, options)
 endfunction
