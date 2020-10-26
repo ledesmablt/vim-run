@@ -32,7 +32,7 @@ vim -c 'helptags vim-run/doc' -c quit
 :RunKillAll
 
 " view & manage jobs
-:RunList
+:RunListToggle
 :RunClear
 :RunClearDone
 :RunClearFailed

@@ -34,7 +34,7 @@ command -nargs=* -complete=file Run :call Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call RunQuiet(<q-args>)
 command -nargs=* -complete=file RunWatch :call RunWatch(<q-args>)
 command RunAgain :call RunAgain()
-command RunList :call RunList()
+command RunListToggle :call RunListToggle()
 command RunClear :call RunClear(['DONE', 'FAILED', 'KILLED'])
 command RunClearDone :call RunClear(['DONE'])
 command RunClearFailed :call RunClear(['FAILED', 'KILLED'])
@@ -45,7 +45,7 @@ command RunDeleteLogs :call RunDeleteLogs()
 
 
 " main functions
-function! RunList()
+function! RunListToggle()
   if _IsQFOpen()
     cclose
   else
