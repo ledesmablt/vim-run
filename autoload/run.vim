@@ -201,9 +201,7 @@ function! run#update_run_jobs()
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
   for val in run_jobs_sorted
-    let qf_item = {
-      \ 'lnum': 1
-      \ }
+    let qf_item = {}
     if job_status(val['job']) ==# 'run'
       let qf_item['bufnr'] = bufnr(val['bufname'])
       let status = 'RUNNING'
