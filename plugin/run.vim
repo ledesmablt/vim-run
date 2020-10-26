@@ -31,6 +31,7 @@ endif
 let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
 let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
+let g:run_autosave_logs       = get(g:, 'run_autosave_logs', 0)
 let g:run_timestamp_format    = get(g:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
 
 " commands

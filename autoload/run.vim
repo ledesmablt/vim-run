@@ -84,6 +84,7 @@ function! run#Run(cmd, ...)
         \ 'timestamp': timestamp,
         \ 'job': job,
         \ 'status': 'RUNNING',
+        \ 'autosave': g:run_autosave_logs,
         \ 'options': options
         \ }
   let s:run_jobs[timestamp] = job_obj
@@ -202,11 +203,14 @@ function! run#update_run_jobs()
         \ }))
   for val in run_jobs_sorted
     let qf_item = {}
+    let qf_item['bufnr'] = bufnr(val['bufname'])
     if job_status(val['job']) ==# 'run'
-      let qf_item['bufnr'] = bufnr(val['bufname'])
       let status = 'RUNNING'
     else
-      let qf_item['filename'] = val['filename']
+      if val['autosave']
+        let qf_item['filename'] = val['filename']
+        unlet qf_item['bufnr']
+      endif
       let exitval = job_info(val['job'])['exitval']
       let status = exitval ==# 0 ? 'DONE' : exitval ==# -1 ? 'KILLED' : 'FAILED'
     endif
@@ -216,6 +220,7 @@ function! run#update_run_jobs()
     call add(g:qf_output, qf_item)
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
+
   silent call setqflist(g:qf_output)
   silent call setqflist([], 'a', {'title': 'RunList'})
 endfunction
@@ -264,6 +269,10 @@ endfunction
 
 " callbacks
 function! run#out_cb(channel, msg)
+  if !g:run_autosave_logs
+    return
+  endif
+
   let job = run#get_job_with_object(ch_getjob(a:channel))
   let fname = job['filename']
   call writefile([a:msg], fname, "a")
