@@ -91,7 +91,7 @@ function! run#Run(cmd, ...)
   let msg = '[' . timestamp . '] started - ' . trim(a:cmd)
 
   if get(options, 'watch')
-    exec 'e ' . temppath
+    silent exec 'e ' . temppath
   endif
   call run#alert_and_update(msg, options)
 endfunction
@@ -171,12 +171,15 @@ function! run#RunClear(status_list)
   for job in s:run_jobs->values()
     let status_match = a:status_list->index(job['status']) >= 0
     if status_match
-      exec 'bw! ' . job['bufname']
+      silent exec 'bw! ' . job['bufname']
       unlet s:run_jobs[job['timestamp']]
       let clear_count += 1
     endif
   endfor
-  call run#alert_and_update('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
+  call run#alert_and_update(
+        \ 'Cleared ' . clear_count . (clear_count > 1 ? ' jobs.' : ' job.'),
+        \ {'quiet': 1}
+        \ )
 endfunction
 
 function! run#RunSaveLog(job_key)
