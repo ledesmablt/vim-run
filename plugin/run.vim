@@ -191,8 +191,7 @@ function! Run(cmd, ...)
         \ 'options': options
         \ }
   let s:run_jobs[timestamp] = job_obj
-  let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
-        \ . bufnr(temppath)
+  let msg = '[' . timestamp . '] started - ' . a:cmd
 
   if get(options, 'watch')
     exec 'e ' . temppath
@@ -203,7 +202,7 @@ endfunction
 
 " utility
 function! _ListRunningJobs(...)
-  return copy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
+  return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
 
@@ -253,7 +252,8 @@ function! _RunAlertNoFocus(content, ...)
   if (!g:run_quiet_default || _IsQFOpen()) && !get(options, 'quiet')
     copen
   endif
-  redraw | call _PrintFormatted('Normal', a:content)
+  let msg_format = get(options, 'msg_format', 'Normal')
+  redraw | call _PrintFormatted(msg_format, a:content)
 endfunction
 
 function! _GetJobWithObject(job)
@@ -284,6 +284,7 @@ function! _RunCloseCB(channel)
   let info = _GetJobWithObject(job)
   let exitval = job_info(info['job'])['exitval']
 
+  let kill_options = {'quiet': 1, 'msg_format': 'WarningMsg'}
   if s:run_killall_ongoing
     if exitval != -1
       " no action if killall ongoing
@@ -296,16 +297,22 @@ function! _RunCloseCB(channel)
       let s:run_killall_ongoing = 0
       let msg = s:run_killed_jobs . 
             \ (s:run_killed_jobs > 1 ? ' jobs killed.' : ' job killed.')
-      call _RunAlertNoFocus(msg, {'quiet': 1})
+      call _RunAlertNoFocus(msg, kill_options)
     endif
     return
   endif
 
   " job stop message
+  let options = deepcopy(info['options'])
   if exitval ==# -1
-    call _RunAlertNoFocus('Job ' . info['timestamp'] . ' killed.', {'quiet': 1})
-  else
+    let msg = '[' . info['timestamp'] . '] killed.'
+    let options = {'quiet': 1, 'msg_format': 'WarningMsg'}
+  elseif exitval ==# 0
     let msg = '[' . info['timestamp'] . '] completed.'
-    call _RunAlertNoFocus(msg, info['options'])
+    let options['msg_format'] = 'Green'
+  else
+    let msg = '[' . info['timestamp'] . '] failed.'
+    let options['msg_format'] = 'Red'
   endif
+  call _RunAlertNoFocus(msg, options)
 endfunction
