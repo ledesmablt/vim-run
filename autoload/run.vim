@@ -22,6 +22,18 @@ function! run#Run(cmd, ...)
     return
   endif
 
+  " format filename timestamp (should be unique)
+  let fname_ts_format = '%Y%m%d_%H%M%S'
+  if exists('*strftime')
+    let timestamp = strftime(fname_ts_format)
+  else
+    let timestamp = trim(system('date +"' . fname_ts_format . '"'))
+  endif
+  if has_key(s:run_jobs, timestamp)
+    call run#print_formatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
+    return
+  endif
+
   " get options dict
   let options = get(a:, 1, 0)
   if type(options) != 4
@@ -30,11 +42,6 @@ function! run#Run(cmd, ...)
   let s:run_last_command = a:cmd
   let s:run_last_options = options
 
-  let timestamp = strftime('%Y%m%d_%H%M%S')
-  if has_key(s:run_jobs, timestamp)
-    call run#print_formatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
-    return
-  endif
   let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
@@ -42,13 +49,17 @@ function! run#Run(cmd, ...)
   let execpath = g:runcmdpath . '-exec'
   
   " run job as shell command to tempfile w/ details
+  let date_cmd = 'date +"' . g:run_timestamp_format . '"'
   call writefile([a:cmd], g:runcmdpath)
   call writefile([
-        \ 'printf COMMAND:\ ', 'cat ' .  g:runcmdpath,
+        \ 'printf "COMMAND: "', 'cat ' .  g:runcmdpath,
         \ 'echo WORKDIR: ' . getcwd(),
-        \ 'echo STARTED: ' . strftime('%Y-%m-%d %H:%M:%S'),
+        \ 'printf "STARTED: "',
+        \ date_cmd,
         \ 'printf "\n"',
-        \ $SHELL . ' ' . g:runcmdpath
+        \ $SHELL . ' ' . g:runcmdpath,
+        \ 'printf "\nFINISHED: "',
+        \ date_cmd,
         \], execpath)
   let job = job_start([$SHELL, execpath]->join(' '), {
         \ 'cwd': getcwd(),

@@ -10,9 +10,7 @@
 " prerequisites
 let load_fail = 1
 let fail_msg = 'Could not load vim-run - '
-if !exists('*strftime')
-  let fail_msg .= 'strftime() function not available'
-elseif !isdirectory('/tmp')
+if !isdirectory('/tmp')
   let fail_msg .= '/tmp directory not detected.'
 elseif len($SHELL) == 0
   let fail_msg .= '$SHELL environment variable missing.'
