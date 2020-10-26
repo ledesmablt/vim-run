@@ -200,9 +200,9 @@ function! run#RunSaveLog(job_key)
   endif
 
   "  write from the job buffer if all checks passed
-  silent exec 'e ' . job['bufname'] . ' | w! ' . job['filename']
+  silent exec 'e ' . job['bufname'] . ' | keepalt w! ' . job['filename']
   let job['save'] = 1
-  call run#alert_and_update('Logs saved to ' . job['filename'])
+  call run#alert_and_update('Logs saved to ' . job['filename'], {'quiet': 1})
 endfunction
 
 function! run#RunDeleteLogs()
