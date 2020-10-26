@@ -59,7 +59,7 @@ function! RunClear(status_list)
   let confirm = input(
         \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
         \ )
-  if toupper(confirm) != 'Y'
+  if confirm !=? 'Y'
     return
   endif
 
@@ -82,7 +82,7 @@ function! RunKill(job_key)
     return
   endif
   let job = g:run_jobs[a:job_key]
-  if job['status'] != 'RUNNING'
+  if job['status'] !=# 'RUNNING'
     if !s:run_killall_ongoing
       echom 'Job already finished.'
     endif
@@ -96,13 +96,13 @@ endfunction
 function! RunKillAll()
   " user confirm
   let running_jobs = _ListRunningJobs()->split("\n")
-  if len(running_jobs) == 0
+  if len(running_jobs) ==# 0
     call _PrintWarning('No jobs are running.')
     return
   endif
 
   let confirm = input('Kill all running jobs? (Y/n) ')
-  if toupper(confirm) != 'Y'
+  if confirm !=? 'Y'
     return
   endif
   let s:run_killed_jobs = 0
@@ -119,7 +119,7 @@ function! RunDeleteLogs()
     return
   endif
   let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
-  if toupper(confirm) != 'Y'
+  if confirm !=? 'Y'
     return
   endif
   call system('rm ' . g:rundir . '/*.log')
@@ -135,7 +135,7 @@ function! RunWatch(cmd)
 endfunction
 
 function! RunAgain()
-  if len(g:run_last_command) == 0
+  if len(g:run_last_command) ==# 0
     call _PrintError('Please run a command first.')
     return
   endif
@@ -144,7 +144,7 @@ endfunction
 
 function! Run(cmd, ...)
   " check if command provided
-  if len(trim(a:cmd)) == 0
+  if len(trim(a:cmd)) ==# 0
     call _PrintError('Please provide a command.')
     return
   endif
@@ -213,12 +213,12 @@ endfunction
 
 " utility
 function! _ListRunningJobs(...)
-  return copy(g:run_jobs)->filter('v:val.status == "RUNNING"')
+  return copy(g:run_jobs)->filter('v:val.status ==# "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
 
 function! _IsQFOpen()
-  return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") == "qf"')) > 0
+  return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") ==# "qf"')) > 0
 endfunction
 
 function! _CleanCmdName(cmd)
@@ -229,20 +229,20 @@ endfunction
 function! _UpdateRunJobs()
   let g:qf_output = []
   let run_jobs_sorted = reverse(sort(g:run_jobs->values(), {
-        \ v1, v2 -> v1.timestamp == v2.timestamp ? 0 
+        \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
   for val in run_jobs_sorted
     let qf_item = {
       \ 'lnum': 1
       \ }
-    if job_status(val['job']) == 'run'
+    if job_status(val['job']) ==# 'run'
       let qf_item['bufnr'] = bufnr(val['bufname'])
       let status = 'RUNNING'
     else
       let qf_item['filename'] = val['filename']
       let exitval = job_info(val['job'])['exitval']
-      let status = exitval == 0 ? 'DONE' : exitval == -1 ? 'KILLED' : 'FAILED'
+      let status = exitval ==# 0 ? 'DONE' : exitval ==# -1 ? 'KILLED' : 'FAILED'
     endif
     let qf_item['text'] = status . ' - ' . val['command']
 
@@ -269,7 +269,7 @@ endfunction
 function! _GetJobWithObject(job)
   let pid = job_info(a:job)['process']
   for job in g:run_jobs->values()
-    if job['pid'] == pid
+    if job['pid'] ==# pid
       return job
     endif
   endfor
@@ -306,7 +306,7 @@ function! _RunCloseCB(channel)
     let s:run_killed_jobs += 1
 
     " killall finished
-    if s:run_killed_jobs == s:run_killall_ongoing
+    if s:run_killed_jobs ==# s:run_killall_ongoing
       let s:run_killall_ongoing = 0
       let msg = s:run_killed_jobs . 
             \ (s:run_killed_jobs > 1 ? ' jobs killed.' : ' job killed.')
@@ -316,10 +316,10 @@ function! _RunCloseCB(channel)
   endif
 
   " job stop message
-  if exitval == -1
+  if exitval ==# -1
     call _RunAlertNoFocus('Job ' . info['timestamp'] . ' killed.', {'quiet': 1})
   else
-    let msg = '[' . info['timestamp'] . '] completed, run :RunList to view.'
+    let msg = '[' . info['timestamp'] . '] completed.'
     call _RunAlertNoFocus(msg, info['options'])
   endif
 endfunction
