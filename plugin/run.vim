@@ -8,18 +8,24 @@
 " ============================================================================
 
 " prerequisites
-if len($SHELL) == 0
-  echoerr 'Could not load vim-run - $SHELL environment variable missing.'
-  finish
-endif
-if len($HOME) == 0 && !exists('g:rundir')
-  echoerr "Could not load vim-run - $HOME environment variable missing."
+let load_fail = 1
+let fail_msg = 'Could not load vim-run - '
+if !exists('*strftime')
+  let fail_msg .= 'strftime() function not available'
+elseif !isdirectory('/tmp')
+  let fail_msg .= '/tmp directory not detected.'
+elseif len($SHELL) == 0
+  let fail_msg .= '$SHELL environment variable missing.'
+elseif len($HOME) == 0 && !exists('g:rundir')
+  let fail_msg .= "$HOME environment variable missing."
         \ . " You may assign a directory to the variable g:rundir"
         \ . " to fix this issue."
-  finish
+else
+  let load_fail = 0
 endif
-if !isdirectory('/tmp')
-  echoerr 'Could not load vim-run - /tmp directory not detected.'
+
+if load_fail
+  echoerr fail_msg
   finish
 endif
 
@@ -27,6 +33,7 @@ endif
 let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:runcmdpath              = get(g:, 'runcmdpath', '/tmp/vim-run-cmd')
 let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
+let g:run_timestamp_format    = get(g:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
 
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
