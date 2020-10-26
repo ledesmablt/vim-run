@@ -68,7 +68,7 @@ endfunction
 
 function! RunKill(job_key)
   if !has_key(s:run_jobs, a:job_key)
-    call _PrintError('Job key not found.')
+    call _PrintFormatted('ErrorMsg', 'Job key not found.')
     return
   endif
   let job = s:run_jobs[a:job_key]
@@ -87,7 +87,7 @@ function! RunKillAll()
   " user confirm
   let running_jobs = _ListRunningJobs()->split("\n")
   if len(running_jobs) ==# 0
-    call _PrintWarning('No jobs are running.')
+    call _PrintFormatted('WarningMsg', 'No jobs are running.')
     return
   endif
 
@@ -105,7 +105,7 @@ endfunction
 function! RunDeleteLogs()
   " user confirm
   if len(_ListRunningJobs()) > 0
-    call _PrintError('Cannot delete logs while jobs are running.')
+    call _PrintFormatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
     return
   endif
   let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
@@ -126,7 +126,7 @@ endfunction
 
 function! RunAgain()
   if len(s:run_last_command) ==# 0
-    call _PrintError('Please run a command first.')
+    call _PrintFormatted('ErrorMsg', 'Please run a command first.')
     return
   endif
   call Run(s:run_last_command, s:run_last_options)
@@ -135,7 +135,7 @@ endfunction
 function! Run(cmd, ...)
   " check if command provided
   if len(trim(a:cmd)) ==# 0
-    call _PrintError('Please provide a command.')
+    call _PrintFormatted('ErrorMsg', 'Please provide a command.')
     return
   endif
 
@@ -149,7 +149,7 @@ function! Run(cmd, ...)
 
   let timestamp = strftime('%Y%m%d_%H%M%S')
   if has_key(s:run_jobs, timestamp)
-    call _PrintError('Please wait at least 1 second before starting a new job.')
+    call _PrintFormatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
     return
   endif
   let shortcmd = _CleanCmdName(a:cmd)
@@ -194,7 +194,7 @@ function! Run(cmd, ...)
   let msg = "[" . timestamp . "] " . a:cmd . " - output streaming to buffer "
         \ . bufnr(temppath)
 
-  if has_key(options, 'watch')
+  if get(options, 'watch')
     exec 'e ' . temppath
   endif
   call _RunAlertNoFocus(msg, options)
@@ -250,10 +250,10 @@ function! _RunAlertNoFocus(content, ...)
   endif
 
   call _UpdateRunJobs()
-  if (!g:run_quiet_default || _IsQFOpen()) && !has_key(options, 'quiet')
+  if (!g:run_quiet_default || _IsQFOpen()) && !get(options, 'quiet')
     copen
   endif
-  redraw | echom a:content
+  redraw | call _PrintFormatted('Normal', a:content)
 endfunction
 
 function! _GetJobWithObject(job)
@@ -265,12 +265,8 @@ function! _GetJobWithObject(job)
   endfor
 endfunction
 
-function! _PrintError(msg, ...)
-  echohl ErrorMsg | echomsg a:msg | echohl None
-endfunction
-
-function! _PrintWarning(msg, ...)
-  echohl WarningMsg | echomsg a:msg | echohl None
+function! _PrintFormatted(format, msg)
+  exec 'echohl ' . a:format . ' | echomsg a:msg | echohl None'
 endfunction
 
 
