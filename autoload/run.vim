@@ -15,103 +15,6 @@ if !isdirectory(g:rundir)
 endif
 
 " main functions
-function! run#RunListToggle()
-  if run#is_qf_open()
-    cclose
-  else
-    call run#update_run_jobs()
-    silent copen
-  endif
-endfunction
-
-function! run#RunClear(status_list)
-  " user confirm
-  let confirm = input(
-        \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
-        \ )
-  if confirm !=? 'Y'
-    return
-  endif
-
-  " remove all jobs that match status_list
-  let clear_count = 0
-  for job in s:run_jobs->values()
-    let status_match = a:status_list->index(job['status']) >= 0
-    if status_match
-      exec 'bd! ' . job['bufname']
-      unlet s:run_jobs[job['timestamp']]
-      let clear_count += 1
-    endif
-  endfor
-  call run#alert_and_update('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
-endfunction
-
-function! run#RunKill(job_key)
-  if !has_key(s:run_jobs, a:job_key)
-    call run#print_formatted('ErrorMsg', 'Job key not found.')
-    return
-  endif
-  let job = s:run_jobs[a:job_key]
-  if job['status'] !=# 'RUNNING'
-    if !s:run_killall_ongoing
-      echom 'Job already finished.'
-    endif
-    return 0
-  else
-    call job_stop(job['job'], 'kill')
-    return 1
-  endif
-endfunction
-
-function! run#RunKillAll()
-  " user confirm
-  let running_jobs = run#list_running_jobs()->split("\n")
-  if len(running_jobs) ==# 0
-    call run#print_formatted('WarningMsg', 'No jobs are running.')
-    return
-  endif
-
-  let confirm = input('Kill all running jobs? (Y/n) ')
-  if confirm !=? 'Y'
-    return
-  endif
-  let s:run_killed_jobs = 0
-  let s:run_killall_ongoing = len(running_jobs)
-  for job_key in running_jobs
-    call run#RunKill(job_key)
-  endfor
-endfunction
-
-function! run#RunDeleteLogs()
-  " user confirm
-  if len(run#list_running_jobs()) > 0
-    call run#print_formatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
-    return
-  endif
-  let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
-  if confirm !=? 'Y'
-    return
-  endif
-  call system('rm ' . g:rundir . '/*.log')
-  call run#print_formatted('WarningMsg', 'Deleted all logs.')
-endfunction
-
-function! run#RunQuiet(cmd)
-  call run#Run(a:cmd, { 'quiet': 1 })
-endfunction
-
-function! run#RunWatch(cmd)
-  call run#Run(a:cmd, { 'watch': 1, 'quiet': 1 })
-endfunction
-
-function! run#RunAgain()
-  if len(s:run_last_command) ==# 0
-    call run#print_formatted('ErrorMsg', 'Please run a command first.')
-    return
-  endif
-  call run#Run(s:run_last_command, s:run_last_options)
-endfunction
-
 function! run#Run(cmd, ...)
   " check if command provided
   if len(trim(a:cmd)) ==# 0
@@ -178,22 +81,105 @@ function! run#Run(cmd, ...)
   call run#alert_and_update(msg, options)
 endfunction
 
+function! run#RunQuiet(cmd)
+  call run#Run(a:cmd, { 'quiet': 1 })
+endfunction
+
+function! run#RunWatch(cmd)
+  call run#Run(a:cmd, { 'watch': 1, 'quiet': 1 })
+endfunction
+
+function! run#RunAgain()
+  if len(s:run_last_command) ==# 0
+    call run#print_formatted('ErrorMsg', 'Please run a command first.')
+    return
+  endif
+  call run#Run(s:run_last_command, s:run_last_options)
+endfunction
+
+function! run#RunKill(job_key)
+  if !has_key(s:run_jobs, a:job_key)
+    call run#print_formatted('ErrorMsg', 'Job key not found.')
+    return
+  endif
+  let job = s:run_jobs[a:job_key]
+  if job['status'] !=# 'RUNNING'
+    if !s:run_killall_ongoing
+      echom 'Job already finished.'
+    endif
+    return 0
+  else
+    call job_stop(job['job'], 'kill')
+    return 1
+  endif
+endfunction
+
+function! run#RunKillAll()
+  " user confirm
+  let running_jobs = run#list_running_jobs()->split("\n")
+  if len(running_jobs) ==# 0
+    call run#print_formatted('WarningMsg', 'No jobs are running.')
+    return
+  endif
+
+  let confirm = input('Kill all running jobs? (Y/n) ')
+  if confirm !=? 'Y'
+    return
+  endif
+  let s:run_killed_jobs = 0
+  let s:run_killall_ongoing = len(running_jobs)
+  for job_key in running_jobs
+    call run#RunKill(job_key)
+  endfor
+endfunction
+
+function! run#RunListToggle()
+  if run#is_qf_open()
+    cclose
+  else
+    call run#update_run_jobs()
+    silent copen
+  endif
+endfunction
+
+function! run#RunClear(status_list)
+  " user confirm
+  let confirm = input(
+        \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
+        \ )
+  if confirm !=? 'Y'
+    return
+  endif
+
+  " remove all jobs that match status_list
+  let clear_count = 0
+  for job in s:run_jobs->values()
+    let status_match = a:status_list->index(job['status']) >= 0
+    if status_match
+      exec 'bd! ' . job['bufname']
+      unlet s:run_jobs[job['timestamp']]
+      let clear_count += 1
+    endif
+  endfor
+  call run#alert_and_update('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
+endfunction
+
+function! run#RunDeleteLogs()
+  " user confirm
+  if len(run#list_running_jobs()) > 0
+    call run#print_formatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
+    return
+  endif
+  let confirm = input('Delete all logs from ' . g:rundir . '? (Y/n) ')
+  if confirm !=? 'Y'
+    return
+  endif
+  call system('rm ' . g:rundir . '/*.log')
+  call run#print_formatted('WarningMsg', 'Deleted all logs.')
+endfunction
+
 
 " utility
-function! run#list_running_jobs(...)
-  return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
-        \ ->keys()->join("\n")
-endfunction
-
-function! run#is_qf_open()
-  return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") ==# "qf"')) > 0
-endfunction
-
-function! run#clean_cmd_name(cmd)
-  " replace dir-breaking chars
-  return substitute(split(a:cmd, ' ')[0], '[\/]', '', 'g')
-endfunction
-
 function! run#update_run_jobs()
   let g:qf_output = []
   let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
@@ -241,6 +227,20 @@ function! run#get_job_with_object(job)
       return job
     endif
   endfor
+endfunction
+
+function! run#list_running_jobs(...)
+  return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
+        \ ->keys()->join("\n")
+endfunction
+
+function! run#is_qf_open()
+  return len(filter(range(1, winnr('$')), 'getwinvar(v:val, "&ft") ==# "qf"')) > 0
+endfunction
+
+function! run#clean_cmd_name(cmd)
+  " replace dir-breaking chars
+  return substitute(split(a:cmd, ' ')[0], '[\/]', '', 'g')
 endfunction
 
 function! run#print_formatted(format, msg)

@@ -37,4 +37,5 @@ vim -c 'helptags vim-run/doc' -c quit
 :RunClearDone
 :RunClearFailed
 :RunClearKilled
+:RunDeleteLogs
 ```
