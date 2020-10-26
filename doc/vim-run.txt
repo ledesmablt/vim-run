@@ -13,6 +13,7 @@
 CONTENTS                                                             *vim-run*
 
     1. Introduction             |vim-run-intro|
-    2. Usage                    |vim-run-usage|
-    3. Mappings                 |vim-run-mappings|
-    4. Configuration            |vim-run-configuration|
+    2. Prerequisites            |vim-run-prereq|
+    3. Usage                    |vim-run-usage|
+    4. Mappings                 |vim-run-mappings|
+    5. Configuration            |vim-run-configuration|
