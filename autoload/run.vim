@@ -1,7 +1,7 @@
-if exists('g:loaded_run')
-  " finish
+if exists('s:loaded_run')
+  finish
 endif
-let g:loaded_run = 1
+let s:loaded_run = 1
 
 " user vars
 let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
@@ -224,6 +224,7 @@ function! run#_UpdateRunJobs()
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
   silent call setqflist(g:qf_output)
+  silent call setqflist([], 'a', {'title': 'RunList'})
 endfunction
 
 function! run#_RunAlertNoFocus(content, ...)
