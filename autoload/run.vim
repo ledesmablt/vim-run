@@ -84,7 +84,7 @@ function! run#Run(cmd, ...)
         \ 'timestamp': timestamp,
         \ 'job': job,
         \ 'status': 'RUNNING',
-        \ 'autosave': g:run_autosave_logs,
+        \ 'save': g:run_autosave_logs,
         \ 'options': options
         \ }
   let s:run_jobs[timestamp] = job_obj
@@ -171,12 +171,38 @@ function! run#RunClear(status_list)
   for job in s:run_jobs->values()
     let status_match = a:status_list->index(job['status']) >= 0
     if status_match
-      exec 'bd! ' . job['bufname']
+      exec 'bw! ' . job['bufname']
       unlet s:run_jobs[job['timestamp']]
       let clear_count += 1
     endif
   endfor
   call run#alert_and_update('Cleared ' . clear_count . ' jobs.', {'quiet': 1})
+endfunction
+
+function! run#RunSaveLog(job_key)
+  if !has_key(s:run_jobs, a:job_key)
+    call run#print_formatted('ErrorMsg', 'Job key not found.')
+    return
+  endif
+  let job = s:run_jobs[a:job_key]
+  if job['status'] ==# 'RUNNING'
+    call run#print_formatted('ErrorMsg', 'Cannot save the logs of a running job.')
+    return
+  endif
+  if filereadable(job['filename'])
+    call run#print_formatted('WarningMsg', 'Logs already saved.')
+    return
+  endif
+  if !bufexists(job['bufname'])
+    call run#print_formatted('ErrorMsg', 'Buffer already wiped.')
+    unlet s:run_jobs[a:job_key]
+    return
+  endif
+
+  "  write from the job buffer if all checks passed
+  silent exec 'e ' . job['bufname'] . ' | w! ' . job['filename']
+  let job['save'] = 1
+  call run#alert_and_update('Logs saved to ' . job['filename'])
 endfunction
 
 function! run#RunDeleteLogs()
@@ -207,7 +233,7 @@ function! run#update_run_jobs()
     if job_status(val['job']) ==# 'run'
       let status = 'RUNNING'
     else
-      if val['autosave']
+      if val['save']
         let qf_item['filename'] = val['filename']
         unlet qf_item['bufnr']
       endif
@@ -250,6 +276,11 @@ endfunction
 
 function! run#list_running_jobs(...)
   return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
+        \ ->keys()->join("\n")
+endfunction
+
+function! run#list_unsaved_jobs(...)
+  return deepcopy(s:run_jobs)->filter('v:val.save ==# 0 && v:val.status !=# "RUNNING"')
         \ ->keys()->join("\n")
 endfunction
 
