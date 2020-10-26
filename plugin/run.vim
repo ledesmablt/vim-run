@@ -40,7 +40,7 @@ function! RunListToggle()
     cclose
   else
     call _UpdateRunJobs()
-    copen
+    silent copen
   endif
 endfunction
 
@@ -113,7 +113,7 @@ function! RunDeleteLogs()
     return
   endif
   call system('rm ' . g:rundir . '/*.log')
-  redraw | echom 'Deleted all logs.'
+  call _PrintFormatted('WarningMsg', 'Deleted all logs.')
 endfunction
 
 function! RunQuiet(cmd)
@@ -191,7 +191,7 @@ function! Run(cmd, ...)
         \ 'options': options
         \ }
   let s:run_jobs[timestamp] = job_obj
-  let msg = '[' . timestamp . '] started - ' . a:cmd
+  let msg = '[' . timestamp . '] started - ' . trim(a:cmd)
 
   if get(options, 'watch')
     exec 'e ' . temppath
@@ -239,7 +239,7 @@ function! _UpdateRunJobs()
     call add(g:qf_output, qf_item)
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
-  call setqflist(g:qf_output)
+  silent call setqflist(g:qf_output)
 endfunction
 
 function! _RunAlertNoFocus(content, ...)
@@ -250,10 +250,10 @@ function! _RunAlertNoFocus(content, ...)
 
   call _UpdateRunJobs()
   if (!g:run_quiet_default || _IsQFOpen()) && !get(options, 'quiet')
-    copen
+    silent copen
   endif
   let msg_format = get(options, 'msg_format', 'Normal')
-  redraw | call _PrintFormatted(msg_format, a:content)
+  call _PrintFormatted(msg_format, a:content)
 endfunction
 
 function! _GetJobWithObject(job)
@@ -266,7 +266,7 @@ function! _GetJobWithObject(job)
 endfunction
 
 function! _PrintFormatted(format, msg)
-  exec 'echohl ' . a:format . ' | echomsg a:msg | echohl None'
+  exec 'redraw | echohl ' . a:format . ' | echomsg a:msg | echohl None'
 endfunction
 
 
@@ -274,7 +274,7 @@ endfunction
 function! _RunOutCB(channel, msg)
   let job = _GetJobWithObject(ch_getjob(a:channel))
   let fname = job['filename']
-  execute 'redir >> ' . fname
+  silent exec 'redir >> ' . fname
     silent echo a:msg
   redir END
 endfunction
