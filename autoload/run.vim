@@ -253,19 +253,19 @@ function! run#RunBrowseLogs(...)
         \ " | head -n " . limit . 
         \ " | xargs -n 1 -I FILE" .
         \ " sh -c 'printf \"FILE \" && echo $(head -1 FILE)'"
-  let s:qf_output = []
+  let qf_output = []
   for entry in system(cmd_get_files)->trim()->split("\n")
     let qf_item = {}
     let split_str = ' COMMAND: '
     let split_cmd = entry->split(split_str)
     let qf_item['filename'] = split_cmd[0]
     let qf_item['text'] = 'SAVED - ' . split_cmd[1:]->join(split_str)
-    call add(s:qf_output, qf_item)
+    call add(qf_output, qf_item)
   endfor
 
-  silent call setqflist(s:qf_output)
+  silent call setqflist(qf_output)
   silent call setqflist([], 'a', {'title': 'RunLogs'})
-  let limit = min([limit, len(s:qf_output)])
+  let limit = min([limit, len(qf_output)])
   let msg = 'Showing the last ' . limit . ' saved logs.'
   call run#print_formatted('Normal', msg)
   if !run#is_qf_open()
@@ -290,7 +290,7 @@ endfunction
 
 " utility
 function! run#update_run_jobs()
-  let s:qf_output = []
+  let qf_output = []
   let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
@@ -316,11 +316,11 @@ function! run#update_run_jobs()
     let qf_item['text'] = status . ' - ' . val['command']
 
     " update output and global jobs dict
-    call add(s:qf_output, qf_item)
+    call add(qf_output, qf_item)
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
 
-  silent call setqflist(s:qf_output)
+  silent call setqflist(qf_output)
   silent call setqflist([], 'a', {'title': 'RunList'})
 endfunction
 
