@@ -94,6 +94,10 @@ function! run#Run(cmd, ...)
 
   if get(options, 'watch')
     silent exec 'e ' . temppath
+  elseif get(options, 'split')
+    silent exec 'belowr sp ' . temppath
+  elseif get(options, 'vsplit')
+    silent exec 'rightb vs ' . temppath
   endif
   call run#alert_and_update(msg, options)
 endfunction
@@ -104,6 +108,14 @@ endfunction
 
 function! run#RunWatch(cmd)
   call run#Run(a:cmd, { 'watch': 1, 'quiet': 1 })
+endfunction
+
+function! run#RunSplit(cmd)
+  call run#Run(a:cmd, { 'split': 1 })
+endfunction
+
+function! run#RunVSplit(cmd)
+  call run#Run(a:cmd, { 'vsplit': 1 })
 endfunction
 
 function! run#RunAgain()
