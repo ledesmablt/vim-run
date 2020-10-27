@@ -38,7 +38,7 @@ function! run#Run(cmd, ...)
 
   " get options dict
   let options = get(a:, 1, 0)
-  if type(options) != 4
+  if type(options) !=# 4
     let options = {}
   endif
   let s:run_last_command = a:cmd
@@ -187,6 +187,10 @@ function! run#RunListToggle()
 endfunction
 
 function! run#RunClear(status_list)
+  if len(s:run_jobs) == 0
+    call run#print_formatted('WarningMsg', 'The RunList is already clear.')
+    return
+  endif
   " user confirm
   let confirm = input(
         \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
@@ -206,7 +210,7 @@ function! run#RunClear(status_list)
     endif
   endfor
   call run#alert_and_update(
-        \ 'Cleared ' . clear_count . (clear_count > 1 ? ' jobs.' : ' job.'),
+        \ 'Cleared ' . clear_count . (clear_count !=# 1 ? ' jobs.' : ' job.'),
         \ {'quiet': 1}
         \ )
 endfunction
@@ -322,7 +326,7 @@ endfunction
 
 function! run#alert_and_update(content, ...)
   let options = get(a:, 1, 0)
-  if type(options) != 4
+  if type(options) !=# 4
     let options = {}
   endif
 
@@ -385,7 +389,7 @@ function! run#close_cb(channel)
 
   let kill_options = {'quiet': 1, 'msg_format': 'WarningMsg'}
   if s:run_killall_ongoing
-    if exitval != -1
+    if exitval !=# -1
       " no action if killall ongoing
       return
     endif
@@ -395,7 +399,7 @@ function! run#close_cb(channel)
     if s:run_killed_jobs ==# s:run_killall_ongoing
       let s:run_killall_ongoing = 0
       let msg = s:run_killed_jobs . 
-            \ (s:run_killed_jobs > 1 ? ' jobs killed.' : ' job killed.')
+            \ (s:run_killed_jobs !=# 1 ? ' jobs killed.' : ' job killed.')
       call run#alert_and_update(msg, kill_options)
     endif
     return
