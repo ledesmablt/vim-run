@@ -46,7 +46,7 @@ command RunKillAll :call run#RunKillAll()
 command RunListToggle :call run#RunListToggle()
 command RunClear :call run#RunClear(['DONE', 'FAILED', 'KILLED'])
 command RunClearDone :call run#RunClear(['DONE'])
-command RunClearFailed :call run#RunClear(['FAILED', 'KILLED'])
+command RunClearFailed :call run#RunClear(['FAILED'])
 command RunClearKilled :call run#RunClear(['KILLED'])
 
 command -nargs=1 -complete=custom,run#list_unsaved_jobs RunSaveLog :call run#RunSaveLog(<q-args>)
