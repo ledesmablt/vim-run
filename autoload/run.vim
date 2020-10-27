@@ -65,23 +65,36 @@ function! run#Run(cmd, ...)
         \ 'printf "\n$STATUS: "',
         \ date_cmd,
         \ 'exit $EXITVAL',
-        \], execpath)
-  let job = job_start([$SHELL, execpath]->join(' '), {
+        \ ], execpath)
+
+  let job_options = {
         \ 'cwd': getcwd(),
-        \ 'out_io': 'buffer', 'out_name': temppath,
         \ 'out_msg': 0, 'out_modifiable': 0,
-        \ 'out_cb': 'run#out_cb',
         \ 'close_cb': 'run#close_cb',
         \ 'pty': 1 
+        \ }
+
+  let is_nostream = get(options, 'nostream') || g:run_nostream_default
+  if is_nostream
+    call extend(job_options, {
+        \ 'out_io': 'file', 'out_name': fpath
         \ })
+    " create an empty buffer the qf list can open
+    silent exec 'badd ' . fpath
+  else
+    call extend(job_options, {
+        \ 'out_io': 'buffer', 'out_name': temppath,
+        \ 'out_cb': 'run#out_cb'
+        \ })
+  endif
+  let job = job_start([$SHELL, execpath]->join(' '), job_options)
   
   " get job info for global job dict
   let info = job_info(job)
-  let pid = info['process']
   let job_obj = {
-        \ 'pid': pid,
+        \ 'pid': info['process'],
         \ 'command': a:cmd,
-        \ 'bufname': temppath,
+        \ 'bufname': (is_nostream ? fpath : temppath),
         \ 'filename': fpath,
         \ 'timestamp': timestamp,
         \ 'job': job,
@@ -116,6 +129,10 @@ endfunction
 
 function! run#RunVSplit(cmd)
   call run#Run(a:cmd, { 'vsplit': 1 })
+endfunction
+
+function! run#RunNoStream(cmd)
+  call run#Run(a:cmd, { 'nostream': 1 })
 endfunction
 
 function! run#RunAgain()
@@ -246,7 +263,8 @@ function! run#update_run_jobs()
         \ }))
   for val in run_jobs_sorted
     let qf_item = {}
-    let qf_item['bufnr'] = bufnr(val['bufname'])
+    let bufname = get(val['options'], 'nostream') ? val['filename'] : val['bufname']
+    let qf_item['bufnr'] = bufnr(bufname)
     if job_status(val['job']) ==# 'run'
       let status = 'RUNNING'
     else

@@ -31,6 +31,7 @@ endif
 let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
 let g:run_autosave_logs       = get(g:, 'run_autosave_logs', 0)
+let g:run_nostream_default    = get(g:, 'run_nostream_default', 0)
 
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
@@ -38,6 +39,7 @@ command -nargs=* -complete=file RunQuiet :call run#RunQuiet(<q-args>)
 command -nargs=* -complete=file RunWatch :call run#RunWatch(<q-args>)
 command -nargs=* -complete=file RunSplit :call run#RunSplit(<q-args>)
 command -nargs=* -complete=file RunVSplit :call run#RunVSplit(<q-args>)
+command -nargs=* -complete=file RunNoStream :call run#RunNoStream(<q-args>)
 command RunAgain :call run#RunAgain()
 
 command -nargs=1 -complete=custom,run#list_running_jobs RunKill :call run#RunKill(<q-args>)
