@@ -79,8 +79,6 @@ function! run#Run(cmd, ...)
     call extend(job_options, {
         \ 'out_io': 'file', 'out_name': fpath
         \ })
-    " create an empty buffer the qf list can open
-    silent exec 'badd ' . fpath
   else
     call extend(job_options, {
         \ 'out_io': 'buffer', 'out_name': temppath,
@@ -256,33 +254,37 @@ endfunction
 
 " utility
 function! run#update_run_jobs()
-  let g:qf_output = []
+  let s:qf_output = []
   let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
   for val in run_jobs_sorted
     let qf_item = {}
-    let bufname = get(val['options'], 'nostream') ? val['filename'] : val['bufname']
-    let qf_item['bufnr'] = bufnr(bufname)
-    if job_status(val['job']) ==# 'run'
+    let status = job_status(val['job'])
+    let is_nostream = get(val['options'], 'nostream')
+
+    " set the qf buffer / file to open
+    if is_nostream || (status !=# 'run' && val['save'])
+      let qf_item['filename'] = val['filename']
+    else
+      let qf_item['bufnr'] = bufnr(val['bufname'])
+    endif
+    " set the qf message (status)
+    if status ==# 'run'
       let status = 'RUNNING'
     else
-      if val['save']
-        let qf_item['filename'] = val['filename']
-        unlet qf_item['bufnr']
-      endif
       let exitval = job_info(val['job'])['exitval']
       let status = exitval ==# 0 ? 'DONE' : exitval ==# -1 ? 'KILLED' : 'FAILED'
     endif
     let qf_item['text'] = status . ' - ' . val['command']
 
     " update output and global jobs dict
-    call add(g:qf_output, qf_item)
+    call add(s:qf_output, qf_item)
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
 
-  silent call setqflist(g:qf_output)
+  silent call setqflist(s:qf_output)
   silent call setqflist([], 'a', {'title': 'RunList'})
 endfunction
 
