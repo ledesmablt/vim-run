@@ -376,7 +376,8 @@ function! run#out_cb(channel, msg)
   if !g:run_autosave_logs
     return
   endif
-
+  
+  " write logs to output file while running
   let job = run#get_job_with_object(ch_getjob(a:channel))
   let fname = job['filename']
   call writefile([a:msg], fname, "a")

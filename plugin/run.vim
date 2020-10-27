@@ -28,11 +28,11 @@ if load_fail
 endif
 
 " user vars
-let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
-let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
-let g:run_autosave_logs       = get(g:, 'run_autosave_logs', 0)
-let g:run_nostream_default    = get(g:, 'run_nostream_default', 0)
-let g:run_browse_default_limit= get(g:, 'run_browse_default_limit', 10)
+let g:rundir                   = get(g:, 'rundir',  $HOME . '/.vim/rundir')
+let g:run_quiet_default        = get(g:, 'run_quiet_default', 0)
+let g:run_autosave_logs        = get(g:, 'run_autosave_logs', 0)
+let g:run_nostream_default     = get(g:, 'run_nostream_default', 0)
+let g:run_browse_default_limit = get(g:, 'run_browse_default_limit', 10)
 
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
