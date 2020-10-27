@@ -32,6 +32,7 @@ let g:rundir                  = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:run_quiet_default       = get(g:, 'run_quiet_default', 0)
 let g:run_autosave_logs       = get(g:, 'run_autosave_logs', 0)
 let g:run_nostream_default    = get(g:, 'run_nostream_default', 0)
+let g:run_browse_default_limit= get(g:, 'run_browse_default_limit', 10)
 
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
@@ -52,5 +53,5 @@ command RunClearFailed :call run#RunClear(['FAILED'])
 command RunClearKilled :call run#RunClear(['KILLED'])
 
 command -nargs=1 -complete=custom,run#list_unsaved_jobs RunSaveLog :call run#RunSaveLog(<q-args>)
-command RunBrowseLogs :call run#RunBrowseLogs()
+command -nargs=? RunBrowseLogs :call run#RunBrowseLogs(<args>)
 command RunDeleteLogs :call run#RunDeleteLogs()

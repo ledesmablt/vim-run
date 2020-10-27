@@ -238,8 +238,13 @@ function! run#RunSaveLog(job_key)
 endfunction
 
 function! run#RunBrowseLogs(...)
-  let limit = 10
-  " todo: add limiter default 10, can be current date?
+  let limit = get(a:, 1, g:run_browse_default_limit)
+  if type(limit) !=# 0  || limit <= 0
+    " must be positive number
+    call run#print_formatted('ErrorMsg', 'Please provide a valid number.')
+    return
+  endif
+
   let cmd_get_files = "find " . g:rundir . " -type f | sort -r" .
         \ " | head -n " . limit . 
         \ " | xargs -n 1 -I FILE" .
@@ -256,6 +261,7 @@ function! run#RunBrowseLogs(...)
 
   silent call setqflist(s:qf_output)
   silent call setqflist([], 'a', {'title': 'RunLogs'})
+  let limit = min([limit, len(s:qf_output)])
   let msg = 'Showing the last ' . limit . ' saved logs.'
   call run#print_formatted('Normal', msg)
   if !run#is_qf_open()
