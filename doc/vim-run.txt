@@ -1,19 +1,127 @@
-*vim-run.txt* run, view, and manage UNIX shell commands
+*vim-run.txt* Run, view, and manage UNIX shell commands with ease.
 
-				       _									~
-				__   _(_)_ __ ___        _ __ _   _ _ __	~
-				\ \ / / | '_ ` _ \ _____| '__| | | | '_ \	~
-				 \ V /| | | | | | |_____| |  | |_| | | | |	~
-				  \_/ |_|_| |_| |_|     |_|   \__,_|_| |_|	~
+                       _                                    ~
+                __   _(_)_ __ ___        _ __ _   _ _ __    ~
+                \ \ / / | '_ ` _ \ _____| '__| | | | '_ \   ~
+                 \ V /| | | | | | |_____| |  | |_| | | | |  ~
+                  \_/ |_|_| |_| |_|     |_|   \__,_|_| |_|  ~
 
-			Run, view, and manage UNIX shell commands with ease
-					from your favorite code editor.
 
 ==============================================================================
-CONTENTS                                                             *vim-run*
+CONTENTS                                                               *vim-run*
 
-    1. Introduction             |vim-run-intro|
-    2. Prerequisites            |vim-run-prereq|
-    3. Usage                    |vim-run-usage|
-    4. Mappings                 |vim-run-mappings|
-    5. Configuration            |vim-run-configuration|
+    1. Intro                                                     |vim-run-intro|
+    2. Commands                                               |vim-run-commands|
+    3. Configuration                                     |vim-run-configuration|
+    4. About                                                     |vim-run-about|
+
+==============================================================================
+INTRO                                                            *vim-run-intro*
+
+Running external commands with vim has always been clunky to work with. >
+    :!apt update                      (can't edit while running)
+    :!apt update &                    (stdout hijacks your screen)
+    :!apt update > some/file.log &    (logs available only when done)
+<
+In most cases, it would be a lot more convenient to just open up a new
+terminal (maybe with `:term`, tmux, or a new window in your OS) and run your
+command from there.
+
+But what if you don't want to worry about managing several active terminal
+sessions? Maybe you'd prefer to just keep one window open - vim - and run
+processes without losing too much screen real estate.
+
+This plugin attempts to solve that problem and provide a more intuitive
+experience around running processess asynchronously.
+
+==============================================================================
+COMMANDS                                                      *vim-run-commands*
+
+:Run <command>                                                            *:Run*
+    Starts a job that runs <command> in the background with the user's shell
+    (from the $SHELL environment variable). The job's timestamp is its
+    <job_key>, which is also its filename prefix (see |:RunListToggle|) and the
+    argument for other commands.
+
+    Job details and stdout stream to a buffer, and upon completion may be
+    saved in a file under |g:rundir| (automatic if |g:run_autosave_logs| is
+    enabled). The job is killed when the user runs |:RunKill| <job_key>,
+    |:RunKillAll|, or leaves vim.
+
+:RunQuiet <command>                                                  *:RunQuiet*
+    Calls |:Run| <command> but doesn't open the |RunList| when the job starts
+    and ends. Same behavior as setting |g:run_quiet_default| = 1.
+
+:RunWatch <command>                                                  *:RunWatch*
+    Calls |:Run| <command> and changes the current buffer to the log stream.
+
+:RunAgain                                                            *:RunAgain*
+    Calls the last |:Run| command with its settings (quiet, watch, etc.)
+
+:RunKill <job_key>                                                    *:RunKill*
+    Sends a SIGKILL signal to stop job <job_key>.
+
+:RunKillAll                                                        *:RunKillAll*
+    Sends a SIGKILL signal to all running jobs.
+
+:RunListToggle                                                  *:RunListToggle*
+    Open or close the |RunList| - a |quickfix| menu that shows all jobs, their
+    status, and their log files. The list is updated every time jobs start or
+    stop, and when any |:RunClear| command is called.
+
+    If |g:run_quiet_default| is not enabled or the job is not run with
+    |:RunQuiet|, the |RunList| will be opened when the job starts or stops.
+
+:RunClear                                                            *:RunClear*
+    Remove all jobs with status DONE / FAILED / KILLED from the |RunList| and
+    wipe their associated buffers (see `:bw`). This does not clear any saved
+    log files.
+
+:RunClearDone                                                    *:RunClearDone*
+    Same as |:RunClear| but only removes jobs with status DONE.
+
+:RunClearFailed                                                *:RunClearFailed*
+    Same as |:RunClear| but only removes jobs with status FAILED.
+
+:RunClearKilled                                                *:RunClearKilled*
+    Same as |:RunClear| but only removes jobs with status KILLED.
+
+:RunSaveLog <job_key>                                              *:RunSaveLog*
+    Saves the log file of <job_key> to |g:rundir| if the job was run while
+    |g:run_autosave_logs| was disabled.
+
+:RunDeleteLogs                                                  *:RunDeleteLogs*
+    Removes all log files under |g:rundir|.
+
+==============================================================================
+CONFIGURATION                                            *vim-run-configuration*
+
+g:rundir                                                              *g:rundir* 
+    Where all log files are stored if |g:run_autosave_logs| is enabled (all
+    jobs are saved) or |:RunSaveLog| is called. Must be a valid directory path
+    which the user has edit access to. If |g:rundir| is defined and valid but
+    the directory doesn't exist yet, it will be created automatically. >
+
+        let g:rundir = ~/.vim/rundir    (default)
+<
+g:run_quiet_default                                        *g:run_quiet_default*
+    If enabled, all |:Run| commands will not open the |RunList| whenever jobs
+    start or stop. >
+
+        let g:run_quiet_default = 0     (default)
+<
+g:run_autosave_logs                                        *g:run_autosave_logs*
+    If enabled, all log files will be saved in |g:rundir| once the job stops.
+    Otherwise, logs will only be streamed to the buffers and will be lost once
+    the user either deletes the buffer or leaves vim. >
+
+        let g:run_autosave_logs = 0     (default)
+<
+==============================================================================
+ABOUT                                                            *vim-run-about*
+
+Grab the latest version, report a bug, or contribute on GitHub:
+
+https://github.com/ledesmablt/vim-run
+
+ vim:tw=78:ts=8:ft=help:norl:
