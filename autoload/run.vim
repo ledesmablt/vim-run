@@ -237,6 +237,32 @@ function! run#RunSaveLog(job_key)
   call run#alert_and_update('Logs saved to ' . job['filename'], {'quiet': 1})
 endfunction
 
+function! run#RunBrowseLogs(...)
+  let limit = 10
+  " todo: add limiter default 10, can be current date?
+  let cmd_get_files = "find " . g:rundir . " -type f | sort -r" .
+        \ " | head -n " . limit . 
+        \ " | xargs -n 1 -I FILE" .
+        \ " sh -c 'printf \"FILE \" && echo $(head -1 FILE)'"
+  let s:qf_output = []
+  for entry in system(cmd_get_files)->trim()->split("\n")
+    let qf_item = {}
+    let split_str = ' COMMAND: '
+    let split_cmd = entry->split(split_str)
+    let qf_item['filename'] = split_cmd[0]
+    let qf_item['text'] = 'SAVED - ' . split_cmd[1:]->join(split_str)
+    call add(s:qf_output, qf_item)
+  endfor
+
+  silent call setqflist(s:qf_output)
+  silent call setqflist([], 'a', {'title': 'RunLogs'})
+  let msg = 'Showing the last ' . limit . ' saved logs.'
+  call run#print_formatted('Normal', msg)
+  if !run#is_qf_open()
+    silent copen
+  endif
+endfunction
+
 function! run#RunDeleteLogs()
   " user confirm
   if len(run#list_running_jobs()) > 0
