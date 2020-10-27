@@ -50,10 +50,25 @@ COMMANDS                                                      *vim-run-commands*
 
 :RunQuiet <command>                                                  *:RunQuiet*
     Calls |:Run| <command> but doesn't open the |RunList| when the job starts
-    and ends. Same behavior as setting |g:run_quiet_default| = 1.
+    and ends. Enabling |g:run_quiet_default| will cause all |:Run| commands to
+    behave this way.
 
 :RunWatch <command>                                                  *:RunWatch*
     Calls |:Run| <command> and changes the current buffer to the log stream.
+
+:RunSplit <command>                                                  *:RunSplit*
+    Calls |:Run| <command> and opens the log buffer in a window below.
+
+:RunVSplit <command>                                                 *:RunVSplit*
+    Calls |:Run| <command> and opens the log buffer in a window to the right.
+
+:RunNoStream <command>                                             *:RunNoStream*
+    Calls |:Run| <command> without creating a log buffer. The results only will 
+    be written once the command stops. This is ideal for commands that produce
+    a large amount of output quickly, which may cause performance issues.
+
+    Enabling |g:run_nostream_default| will cause all |:Run| commands to behave
+    this way.
 
 :RunAgain                                                            *:RunAgain*
     Calls the last |:Run| command with its settings (quiet, watch, etc.)
@@ -90,6 +105,11 @@ COMMANDS                                                      *vim-run-commands*
     Saves the log file of <job_key> to |g:rundir| if the job was run while
     |g:run_autosave_logs| was disabled.
 
+:RunBrowseLogs [<limit>]                                        *:RunBrowseLogs*
+    Loads the last <limit> logs (default: |g:run_browse_default_limit|) saved
+    in |g:rundir| into the |quickfix| window. Works just like the |RunList|
+    but shows your saved history instead of the current session.
+
 :RunDeleteLogs                                                  *:RunDeleteLogs*
     Removes all log files under |g:rundir|.
 
@@ -102,20 +122,35 @@ g:rundir                                                              *g:rundir*
     which the user has edit access to. If |g:rundir| is defined and valid but
     the directory doesn't exist yet, it will be created automatically. >
 
-        let g:rundir = ~/.vim/rundir    (default)
+        let g:rundir = ~/.vim/rundir           (default)
 <
 g:run_quiet_default                                        *g:run_quiet_default*
     If enabled, all |:Run| commands will not open the |RunList| whenever jobs
-    start or stop. >
+    start or stop. Note that whenever jobs are updated and the |RunList| is
+    open, this causes the editor to focus on the |quickfix| menu which may
+    interrupt your editing. >
 
-        let g:run_quiet_default = 0     (default)
+        let g:run_quiet_default = 0            (default)
 <
 g:run_autosave_logs                                        *g:run_autosave_logs*
     If enabled, all log files will be saved in |g:rundir| once the job stops.
     Otherwise, logs will only be streamed to the buffers and will be lost once
     the user either deletes the buffer or leaves vim. >
 
-        let g:run_autosave_logs = 0     (default)
+        let g:run_autosave_logs = 0            (default)
+<
+g:run_nostream_default                                  *g:run_nostream_default*
+    If enabled, all |:Run| commands will not produce a log buffer when jobs
+    are started. Output will only be written to the log file in |g:rundir|
+    once the job has finished running. Overrides |g:run_autosave_logs|.  >
+
+        let g:run_nostream_default = 0         (default)
+<
+g:run_browse_default_limit                          *g:run_browse_default_limit*
+    The default number of files to show when |:RunBrowseLogs| is called with
+    no arguments. >
+
+        let g:run_browse_default_limit = 10    (default)
 <
 ==============================================================================
 ABOUT                                                            *vim-run-about*

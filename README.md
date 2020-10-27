@@ -1,4 +1,4 @@
-# Vim-Run
+# vim-run
 
 Run, view, and manage UNIX shell commands with ease from your
 favorite code editor. (a work in progress)
@@ -47,6 +47,9 @@ vim -c 'helptags vim-run/doc' -c quit
 :Run <command>
 :RunQuiet <command>
 :RunWatch <command>
+:RunSplit <command>
+:RunVSplit <command>
+:RunNoStream <command>
 :RunAgain
 
 " kill jobs
@@ -62,7 +65,17 @@ vim -c 'helptags vim-run/doc' -c quit
 
 " manage log files
 :RunSaveLog <job_key>
+:RunBrowseLogs [<limit>]
 :RunDeleteLogs
 ```
 
-More stuff is covered detail in the docs - `:h vim-run`
+## Configuration
+```vim
+let g:rundir = ~/.vim/rundir
+let g:run_quiet_default = 0
+let g:run_autosave_logs = 0
+let g:run_nostream_default = 0
+let g:run_browse_default_limit = 10
+```
+
+More details in the docs - `:h vim-run`
