@@ -4,10 +4,12 @@ endif
 let s:loaded_run = 1
 
 " script vars
+let s:runcmdpath              = get(s:, 'runcmdpath', '/tmp/vim-run-cmd')
 let s:run_jobs                = get(s:, 'run_jobs', {})
 let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
+let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
 
 " init rundir
 if !isdirectory(g:rundir)
@@ -46,18 +48,18 @@ function! run#Run(cmd, ...)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
   let temppath = '/tmp/vim-run.' . timestamp . '.log'
-  let execpath = g:runcmdpath . '-exec'
+  let execpath = s:runcmdpath . '-exec'
   
   " run job as shell command to tempfile w/ details
-  let date_cmd = 'date +"' . g:run_timestamp_format . '"'
-  call writefile([a:cmd], g:runcmdpath)
+  let date_cmd = 'date +"' . s:run_timestamp_format . '"'
+  call writefile([a:cmd], s:runcmdpath)
   call writefile([
-        \ 'printf "COMMAND: "', 'cat ' .  g:runcmdpath,
+        \ 'printf "COMMAND: "', 'cat ' .  s:runcmdpath,
         \ 'echo WORKDIR: ' . getcwd(),
         \ 'printf "STARTED: "',
         \ date_cmd,
         \ 'printf "\n"',
-        \ $SHELL . ' ' . g:runcmdpath,
+        \ $SHELL . ' ' . s:runcmdpath,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
         \ 'printf "\n$STATUS: "',
