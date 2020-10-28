@@ -213,21 +213,7 @@ function! run#RunSendKeys(cmd)
     return
   endif
 
-  " check if current buffer is a job
-  let curr = bufname('%')
-  let job = ''
-  for job_info in s:run_jobs->values()
-    if job_info['bufname'] ==# curr
-      if job_info['status'] !=# 'RUNNING'
-        call run#print_formatted('ErrorMsg', 'Job already finished.')
-        return
-      else
-        let job = job_info['job']
-        break
-      endif
-    endif
-  endfor
-
+  let job = run#get_current_buf_job()
   if empty(job)
     call run#print_formatted('ErrorMsg',
         \ 'Please focus your cursor on the window of an active log buffer.'
@@ -409,6 +395,21 @@ function! run#cmd_input_finished()
   call run#Run(cmd_text, s:run_edit_options)
   let s:run_edit_options = {}
   call delete(fname)
+endfunction
+
+function! run#get_current_buf_job()
+  " check if current buffer is a job
+  let curr = bufname('%')
+  for job_info in s:run_jobs->values()
+    if job_info['bufname'] ==# curr
+      if job_info['status'] !=# 'RUNNING'
+        call run#print_formatted('ErrorMsg', 'Job already finished.')
+        return
+      else
+        return job_info['job']
+      endif
+    endif
+  endfor
 endfunction
 
 function! run#update_run_jobs()
