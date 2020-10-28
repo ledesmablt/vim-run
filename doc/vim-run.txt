@@ -36,32 +36,35 @@ experience around running processess asynchronously.
 ==============================================================================
 COMMANDS                                                      *vim-run-commands*
 
-:Run <command>                                                            *:Run*
-    Starts a job that runs <command> in the background with the user's shell
-    (from the $SHELL environment variable). The job's timestamp is its
-    <job_key>, which is also its filename prefix (see |:RunListToggle|) and the
-    argument for other commands.
+:Run [<command>]                                                          *:Run*
+    Starts a job that runs a <command> in the background with the shell
+    provided in |g:run_shell|. If no <command> is provided, a temporary window
+    is opened for the user type in their command. The job starts once the
+    file is saved and the window is closed.
 
-    Job details and stdout stream to a buffer, and upon completion may be
-    saved in a file under |g:rundir| (automatic if |g:run_autosave_logs| is
-    enabled). The job is killed when the user runs |:RunKill| <job_key>,
-    |:RunKillAll|, or leaves vim.
+    The job's timestamp is its <job_key>, which is also its filename prefix
+    (see |:RunListToggle|) and the argument for other commands. Job details
+    and stdout stream to a buffer, and upon completion may be saved in a file
+    under |g:rundir| (automatic if |g:run_autosave_logs| is enabled).
 
-:RunQuiet <command>                                                  *:RunQuiet*
+    The job is killed when the user runs |:RunKill| <job_key>, |:RunKillAll|,
+    or leaves vim.
+
+:RunQuiet [<command>]                                                *:RunQuiet*
     Calls |:Run| <command> but doesn't open the |RunList| when the job starts
     and ends. Enabling |g:run_quiet_default| will cause all |:Run| commands to
     behave this way.
 
-:RunWatch <command>                                                  *:RunWatch*
+:RunWatch [<command>]                                                *:RunWatch*
     Calls |:Run| <command> and changes the current buffer to the log stream.
 
-:RunSplit <command>                                                  *:RunSplit*
+:RunSplit [<command>]                                                *:RunSplit*
     Calls |:Run| <command> and opens the log buffer in a window above.
 
-:RunVSplit <command>                                                 *:RunVSplit*
+:RunVSplit [<command>]                                               *:RunVSplit*
     Calls |:Run| <command> and opens the log buffer in a window to the right.
 
-:RunNoStream <command>                                             *:RunNoStream*
+:RunNoStream [<command>]                                           *:RunNoStream*
     Calls |:Run| <command> without creating a log buffer. The results only will 
     be written once the command stops. This is ideal for commands that produce
     a large amount of output quickly, which may cause performance issues.
@@ -71,6 +74,12 @@ COMMANDS                                                      *vim-run-commands*
 
 :RunAgain                                                            *:RunAgain*
     Calls the last |:Run| command with its settings (quiet, watch, etc.)
+
+:RunSendKeys <text>                                               *:RunSendKeys*
+    Sends <text> to the job of the currently focused buffer, similar to
+    interacting with an input prompt. Note that this only works for jobs that
+    are still running, regardless of whether their logs are being streamed or
+    not (works for commands run with |:RunNoStream|).
 
 :RunKill <job_key>                                                    *:RunKill*
     Sends a SIGKILL signal to stop job <job_key>.

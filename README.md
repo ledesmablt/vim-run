@@ -51,6 +51,7 @@ vim -c 'helptags vim-run/doc' -c quit
 :RunVSplit <command>
 :RunNoStream <command>
 :RunAgain
+:RunSendKeys <text>
 
 " kill jobs
 :RunKill <job_key>
