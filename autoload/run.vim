@@ -359,6 +359,12 @@ function! run#RunDeleteLogs()
     return
   endif
   call system('rm ' . g:rundir . '/*.log')
+
+  let qf_title = getqflist({'title': 1})->get('title')
+  if run#is_qf_open() && qf_title ==# 'RunLogs'
+    silent call setqflist([])
+    silent call setqflist([], 'a', {'title': 'RunLogs'})
+  endif
   call run#print_formatted('WarningMsg', 'Deleted all logs.')
 endfunction
 
