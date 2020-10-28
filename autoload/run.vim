@@ -10,17 +10,17 @@ let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
 
-let s:runeditpath             = get(s:, 'runeditpath')
+let s:run_edit_path           = get(s:, 'run_edit_path')
 let s:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
 let s:run_edit_options        = get(s:, 'run_edit_options', {})
 
-let s:runsendpath             = get(s:, 'runsendpath')
+let s:run_send_path           = get(s:, 'run_send_path')
 let s:run_send_cmd_ongoing    = get(s:, 'run_send_cmd_ongoing', 0)
-let s:run_send_timestamp      = get(s:, 'run_send_cmd_ongoing', 0)
+let s:run_send_timestamp      = get(s:, 'run_send_timestamp', 0)
 
 " constants
-let s:runcmdpath              = '/tmp/vim-run.'
-let s:editmsg                 = '# Edit your command here. Save and quit to start running.'
+let s:run_cmd_path            = '/tmp/vim-run.'
+let s:edit_msg                = '# Edit your command here. Save and quit to start running.'
 
 " autocmds
 augroup RunCmdBufInput
@@ -48,11 +48,7 @@ endif
 
 " main functions
 function! run#Run(cmd, ...)
-  " get options dict
-  let options = get(a:, 1, 0)
-  if type(options) !=# 4
-    let options = {}
-  endif
+  let options = get(a:, 1, {})
 
   " finish editing first
   if s:run_edit_cmd_ongoing
@@ -81,8 +77,8 @@ function! run#Run(cmd, ...)
 
     " open file for editing
     let s:run_edit_options = options
-    let s:runeditpath = s:runcmdpath . 'edit-' . timestamp . '.sh'
-    let editor_lines = [s:editmsg, '']
+    let s:run_edit_path = s:run_cmd_path . 'edit-' . timestamp . '.sh'
+    let editor_lines = [s:edit_msg, '']
     if get(options, 'edit_last')
       call extend(editor_lines, s:run_last_command->split("\n"))
     else
@@ -98,20 +94,20 @@ function! run#Run(cmd, ...)
   let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
-  let temppath = s:runcmdpath . timestamp . '.log'
-  let execpath = s:runcmdpath . 'exec'
+  let temppath = s:run_cmd_path . timestamp . '.log'
+  let execpath = s:run_cmd_path . 'exec'
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  call writefile(a:cmd->split("\n"), s:runcmdpath)
+  call writefile(a:cmd->split("\n"), s:run_cmd_path)
   call writefile([
         \ 'printf "COMMAND: "',
-        \ 'cat ' .  s:runcmdpath . " | sed '2,${s/^/         /g}'",
+        \ 'cat ' .  s:run_cmd_path . " | sed '2,${s/^/         /g}'",
         \ 'echo WORKDIR: ' . getcwd(),
         \ 'printf "STARTED: "',
         \ date_cmd,
         \ 'printf "\n"',
-        \ g:run_shell . ' ' . s:runcmdpath,
+        \ g:run_shell . ' ' . s:run_cmd_path,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
         \ 'printf "\n$STATUS: "',
@@ -211,8 +207,14 @@ endfunction
 
 function! run#RunSendKeys(cmd, ...)
   let options = get(a:, 1, {})
-  let is_from_editor = get(options, 'is_from_editor')
 
+  " finish editing first
+  if s:run_send_cmd_ongoing
+    call run#print_formatted('ErrorMsg', 'Please finish editing the current command.')
+    return
+  endif
+
+  let is_from_editor = get(options, 'is_from_editor')
   if is_from_editor
     if !has_key(s:run_jobs, s:run_send_timestamp)
       call run#print_formatted('ErrorMsg', 'Job already cleared.')
@@ -237,7 +239,7 @@ function! run#RunSendKeys(cmd, ...)
 
   let job_info = run#get_job_with_object(job)
   let timestamp = job_info['timestamp']
-  let editor_lines = [s:editmsg, '', '']
+  let editor_lines = [s:edit_msg, '', '']
 
   if empty(a:cmd->trim())
     if is_from_editor
@@ -345,6 +347,7 @@ endfunction
 
 function! run#RunSaveLog(...)
   let job_key = get(a:, 1)
+  let is_from_current_buf = 0
   if empty(job_key)
     let job = run#get_current_buf_job()
     if type(job) !=# v:t_job
@@ -353,8 +356,10 @@ function! run#RunSaveLog(...)
           \ . ' of an active log buffer.'
           \ )
       return
+    else
+      let job_key = run#get_job_with_object(job)['timestamp']
     endif
-    let job_key = job['timestamp']
+    let is_from_current_buf = 1
   endif
 
   if !has_key(s:run_jobs, job_key)
@@ -376,9 +381,13 @@ function! run#RunSaveLog(...)
     return
   endif
 
-  "  write from the job buffer if all checks passed
-  silent exec 'e ' . job['bufname'] . ' | keepalt w! ' . job['filename']
-  let job['save'] = 1
+  " write from the job buffer if all checks passed
+  if is_from_current_buf
+    silent exec 'w! ' . job['filename']
+  else
+    silent exec 'e ' . job['bufname'] . ' | keepalt w! ' . job['filename']
+  endif
+  let s:run_jobs[job_key]['save'] = 1
   call run#alert_and_update('Logs saved to ' . job['filename'], {'quiet': 1})
 endfunction
 
@@ -441,14 +450,14 @@ function! run#cmd_input_open_editor(editor_lines, timestamp, ...)
   let is_send = get(options, 'is_send')
   let prefix = is_send ? 'send-' : 'edit-'
 
-  let editorpath = s:runcmdpath . prefix . a:timestamp . '.sh'
+  let editorpath = s:run_cmd_path . prefix . a:timestamp . '.sh'
   if is_send
     let s:run_send_cmd_ongoing = 1
-    let s:runsendpath = editorpath
+    let s:run_send_path = editorpath
     let s:run_send_timestamp = a:timestamp
   else
     let s:run_edit_cmd_ongoing = 1
-    let s:runeditpath = editorpath
+    let s:run_edit_path = editorpath
   endif
   call writefile(a:editor_lines, editorpath)
   silent exec 'sp ' . editorpath . ' | normal! G'
@@ -466,12 +475,13 @@ function! run#cmd_input_finished(...)
         \ ->filter('v:val->trim() !~ "^#" && len(v:val->trim()) > 0')
         \ ->join("\n")
 
-  let s:run_edit_cmd_ongoing = 0
   call extend(s:run_edit_options, {'is_from_editor': 1})
   if !get(options, 'send')
+    let s:run_edit_cmd_ongoing = 0
     call run#Run(cmd_text, s:run_edit_options)
     let s:run_edit_options = {}
   else
+    let s:run_send_cmd_ongoing = 0
     call run#RunSendKeys(cmd_text, {'is_from_editor': 1})
   endif
   call delete(fname)
