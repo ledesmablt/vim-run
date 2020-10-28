@@ -75,6 +75,10 @@ COMMANDS                                                      *vim-run-commands*
 :RunAgain                                                            *:RunAgain*
     Calls the last |:Run| command with its settings (quiet, watch, etc.)
 
+:RunAgainEdit                                                    *:RunAgainEdit*
+    Calls |:RunAgain| but opens the last command in an editor before starting
+    its job (similar to calling |:Run| with no arguments).
+
 :RunSendKeys <text>                                               *:RunSendKeys*
     Sends <text> to the job of the currently focused buffer, similar to
     interacting with an input prompt. Note that this only works for jobs that
