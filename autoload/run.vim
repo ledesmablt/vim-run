@@ -15,7 +15,7 @@ let s:run_edit_options        = get(s:, 'run_edit_options', {})
 
 " constants
 let s:runcmdpath              = '/tmp/vim-run.'
-let s:editmsg                 = '# Please enter your command here. Save and quit to start running.'
+let s:editmsg                 = '# Edit your command here. Save and quit to start running.'
 
 " autocmds
 augroup RunCmdBufInput
@@ -62,15 +62,21 @@ function! run#Run(cmd, ...)
   
   if empty(trim(a:cmd))
     " no text provided in cmd input
-    if get(options, 'is_from_editor') 
-      call run#print_formatted('ErrorMsg', 'User cancelled command input.')
+    if get(options, 'is_from_editor') && !get(options, 'edit_last')
+      call run#print_formatted('WarningMsg', 'User cancelled command input.')
       return
     endif
 
     " open file for editing
     let s:run_edit_options = options
     let s:runeditpath = s:runcmdpath . 'edit-' . timestamp . '.sh'
-    call writefile([s:editmsg, '', ''], s:runeditpath)
+    let editor_lines = [s:editmsg, '']
+    if get(options, 'edit_last')
+      call extend(editor_lines, s:run_last_command->split("\n"))
+    else
+      call add(editor_lines, '')
+    endif
+    call writefile(editor_lines, s:runeditpath)
     silent exec 'sp ' . s:runeditpath . ' | normal! G'
     let s:run_edit_cmd_ongoing = 1
     return
@@ -180,6 +186,18 @@ function! run#RunAgain()
     return
   endif
   call run#Run(s:run_last_command, s:run_last_options)
+endfunction
+
+function! run#RunAgainEdit()
+  if empty(s:run_last_command)
+    call run#print_formatted('ErrorMsg', 'Please run a command first.')
+    return
+  endif
+  let new_opts = deepcopy(s:run_last_options)
+  let new_opts['edit_last'] = 1
+  call run#Run('', new_opts)
+  unlet new_opts['edit_last']
+  let s:run_last_options = new_opts
 endfunction
 
 function! run#RunSendKeys(cmd)
