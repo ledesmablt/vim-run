@@ -4,23 +4,42 @@ endif
 let s:loaded_run = 1
 
 " script vars
-let s:runcmdpath              = get(s:, 'runcmdpath', '/tmp/vim-run-cmd')
 let s:run_jobs                = get(s:, 'run_jobs', {})
 let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
+let g:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
+let g:runeditpath             = get(s:, 'runeditpath')
+
+" constants
+let s:runcmdpath              = '/tmp/vim-run.'
+let s:editmsg                 = '# Please enter your command here. Save and quit to start running.'
+
+" autocmds
+augroup RunCmdBufInput
+  autocmd!
+  autocmd BufWinEnter /tmp/vim-run.edit*.sh setlocal bufhidden=wipe
+  autocmd BufWinLeave /tmp/vim-run.edit*.sh call run#cmd_input_finished()
+augroup END
 
 " init rundir
 if !isdirectory(g:rundir)
   call mkdir(g:rundir, 'p')
 endif
 
+
 " main functions
 function! run#Run(cmd, ...)
-  " check if command provided
-  if len(trim(a:cmd)) ==# 0
-    call run#print_formatted('ErrorMsg', 'Please provide a command.')
+  " get options dict
+  let options = get(a:, 1, 0)
+  if type(options) !=# 4
+    let options = {}
+  endif
+
+  " finish editing first
+  if g:run_edit_cmd_ongoing
+    call run#print_formatted('ErrorMsg', 'Please finish editing the current command.')
     return
   endif
 
@@ -35,20 +54,31 @@ function! run#Run(cmd, ...)
     call run#print_formatted('ErrorMsg', 'Please wait at least 1 second before starting a new job.')
     return
   endif
+  
+  if len(trim(a:cmd)) ==# 0
+    " no text provided in cmd input
+    if g:run_edit_cmd_ongoing
+      call run#print_formatted('ErrorMsg', 'Cancelled command input.')
+      return
+    endif
 
-  " get options dict
-  let options = get(a:, 1, 0)
-  if type(options) !=# 4
-    let options = {}
+    " open file for editing
+    let g:runeditpath = s:runcmdpath . 'edit-' . timestamp . '.sh'
+    call writefile([s:editmsg, '', ''], g:runeditpath)
+    silent exec 'sp ' . g:runeditpath . ' | normal! G'
+    let g:run_edit_cmd_ongoing = 1
+    return
   endif
+
+
   let s:run_last_command = a:cmd
   let s:run_last_options = options
 
   let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
-  let temppath = '/tmp/vim-run.' . timestamp . '.log'
-  let execpath = s:runcmdpath . '-exec'
+  let temppath = s:runcmdpath . timestamp . '.log'
+  let execpath = s:runcmdpath . 'exec'
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
@@ -289,6 +319,22 @@ endfunction
 
 
 " utility
+function! run#cmd_input_finished()
+  " goto window
+  let fname = expand('<afile>')
+  let win = bufwinnr(fname)
+  silent exec win . 'wincmd w'
+
+  " keep only non-comment lines w/ text, join to one line
+  let cmd_text = getline(1, '$')
+        \ ->filter('v:val->trim() !~ "^#" && len(v:val->trim()) > 0')
+        \ ->join("\n")
+
+  let g:run_edit_cmd_ongoing = 0
+  call run#Run(cmd_text)
+  call delete(fname)
+endfunction
+
 function! run#update_run_jobs()
   let qf_output = []
   let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
