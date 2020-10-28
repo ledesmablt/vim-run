@@ -110,16 +110,19 @@ function! run#Run(cmd, ...)
         \ }
 
   let is_nostream = get(options, 'nostream') || g:run_nostream_default
+  let ext_options = {}
   if is_nostream
-    call extend(job_options, {
-        \ 'out_io': 'file', 'out_name': fpath
-        \ })
+    let ext_options['out_io'] = 'file'
+    let ext_options['out_name'] = fpath
   else
-    call extend(job_options, {
-        \ 'out_io': 'buffer', 'out_name': temppath,
-        \ 'out_cb': 'run#out_cb'
-        \ })
+    let ext_options['out_io'] = 'buffer'
+    let ext_options['out_name'] = temppath
+    if g:run_autosave_logs
+      " append to saved file on every stdout
+      let ext_options['out_cb'] = 'run#out_cb'
+    endif
   endif
+  call extend(job_options, ext_options)
   let job = job_start([g:run_shell, execpath]->join(' '), job_options)
   
   " get job info for global job dict
@@ -424,10 +427,6 @@ endfunction
 
 " callbacks
 function! run#out_cb(channel, msg)
-  if !g:run_autosave_logs
-    return
-  endif
-  
   " write logs to output file while running
   let job = run#get_job_with_object(ch_getjob(a:channel))
   let fname = job['filename']
