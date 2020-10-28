@@ -44,18 +44,18 @@ vim -c 'helptags vim-run/doc' -c quit
 ## Commands
 ```vim
 " start jobs
-:Run <command>
-:RunQuiet <command>
-:RunWatch <command>
-:RunSplit <command>
-:RunVSplit <command>
-:RunNoStream <command>
+:Run [<command>]
+:RunQuiet [<command>]
+:RunWatch [<command>]
+:RunSplit [<command>]
+:RunVSplit [<command>]
+:RunNoStream [<command>]
 :RunAgain
 :RunAgainEdit
-:RunSendKeys <text>
+:RunSendKeys [<text>]
 
 " kill jobs
-:RunKill <job_key>
+:RunKill [<job_key>]
 :RunKillAll
 
 " view & manage jobs
@@ -66,7 +66,7 @@ vim -c 'helptags vim-run/doc' -c quit
 :RunClearKilled
 
 " manage log files
-:RunSaveLog <job_key>
+:RunSaveLog [<job_key>]
 :RunBrowseLogs [<limit>]
 :RunDeleteLogs
 ```
@@ -74,6 +74,7 @@ vim -c 'helptags vim-run/doc' -c quit
 ## Configuration
 ```vim
 let g:rundir = ~/.vim/rundir
+let g:run_shell = $SHELL
 let g:run_quiet_default = 0
 let g:run_autosave_logs = 0
 let g:run_nostream_default = 0

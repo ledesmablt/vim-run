@@ -47,7 +47,7 @@ COMMANDS                                                      *vim-run-commands*
     and stdout stream to a buffer, and upon completion may be saved in a file
     under |g:rundir| (automatic if |g:run_autosave_logs| is enabled).
 
-    The job is killed when the user runs |:RunKill| <job_key>, |:RunKillAll|,
+    The job is killed when the user runs |:RunKill|, |:RunKillAll|,
     or leaves vim.
 
 :RunQuiet [<command>]                                                *:RunQuiet*
@@ -76,31 +76,36 @@ COMMANDS                                                      *vim-run-commands*
     Calls the last |:Run| command with its settings (quiet, watch, etc.)
 
 :RunAgainEdit                                                    *:RunAgainEdit*
-    Calls |:RunAgain| but opens the last command in an editor before starting
-    its job (similar to calling |:Run| with no arguments).
+    Calls |:RunAgain| but opens the last command in a temporary window before
+    starting its job (similar to calling |:Run| with no arguments).
 
-:RunSendKeys <text>                                               *:RunSendKeys*
+:RunSendKeys [<text>]                                             *:RunSendKeys*
     Sends <text> to the job of the currently focused buffer, similar to
-    interacting with an input prompt. Note that this only works for jobs that
-    are still running, regardless of whether their logs are being streamed or
-    not (works for commands run with |:RunNoStream|).
+    interacting with an input prompt. If no <text> is provided, a temporary
+    window is opened for the user to type in the text to send (similar to
+    calling |:Run| with no arguments).
 
-:RunKill <job_key>                                                    *:RunKill*
-    Sends a SIGKILL signal to stop job <job_key>.
+    Note that this only works for jobs that are still running, regardless of
+    whether or not their logs are being streamed (works for commands run
+    with |:RunNoStream|).
+
+:RunKill [<job_key>]                                                  *:RunKill*
+    Sends a SIGKILL signal to the job of the currently focused buffer, or to
+    the job matching <job_key> if provided.
 
 :RunKillAll                                                        *:RunKillAll*
     Sends a SIGKILL signal to all running jobs.
 
 :RunListToggle                                                  *:RunListToggle*
-    Open or close the |RunList| - a |quickfix| menu that shows all jobs, their
-    status, and their log files. The list is updated every time jobs start or
-    stop, and when any |:RunClear| command is called.
+    Opens or closes the |RunList| - a |quickfix| menu that shows all jobs,
+    their status, and their log files. The list is updated every time jobs
+    start or stop, and when any |:RunClear| command is called.
 
     If |g:run_quiet_default| is not enabled or the job is not run with
     |:RunQuiet|, the |RunList| will be opened when the job starts or stops.
 
 :RunClear                                                            *:RunClear*
-    Remove all jobs with status DONE / FAILED / KILLED from the |RunList| and
+    Removes all jobs with status DONE / FAILED / KILLED from the |RunList| and
     wipe their associated buffers (see `:bw`). This does not clear any saved
     log files.
 
@@ -113,9 +118,10 @@ COMMANDS                                                      *vim-run-commands*
 :RunClearKilled                                                *:RunClearKilled*
     Same as |:RunClear| but only removes jobs with status KILLED.
 
-:RunSaveLog <job_key>                                              *:RunSaveLog*
-    Saves the log file of <job_key> to |g:rundir| if the job was run while
-    |g:run_autosave_logs| was disabled.
+:RunSaveLog [<job_key>]                                            *:RunSaveLog*
+    Saves the log file of the currently focused buffer (or <job_key> if
+    provided) to |g:rundir| in case the job was run while |g:run_autosave_logs|
+    was disabled.
 
 :RunBrowseLogs [<limit>]                                        *:RunBrowseLogs*
     Loads the last <limit> logs (default: |g:run_browse_default_limit|) saved
