@@ -206,17 +206,21 @@ function! run#RunAgainEdit()
 endfunction
 
 function! run#RunSendKeys(cmd)
-  if empty(a:cmd->trim())
+  let job = run#get_current_buf_job()
+  if empty(job)
+    if type(job) ==# v:t_job
+      call run#print_formatted('WarningMsg', 'Job already finished.')
+      return
+    endif
     call run#print_formatted('ErrorMsg',
-        \ 'Please provide text to send to a running job.'
+        \ 'Please focus your cursor on the window of an active log buffer.'
         \ )
     return
   endif
 
-  let job = run#get_current_buf_job()
-  if empty(job)
+  if empty(a:cmd->trim())
     call run#print_formatted('ErrorMsg',
-        \ 'Please focus your cursor on the window of an active log buffer.'
+        \ 'Please provide text to send to a running job.'
         \ )
     return
   endif
@@ -225,15 +229,32 @@ function! run#RunSendKeys(cmd)
   call ch_sendraw(job, a:cmd . "\n")
 endfunction
 
-function! run#RunKill(job_key)
-  if !has_key(s:run_jobs, a:job_key)
+function! run#RunKill(...)
+  let job_key = get(a:, 1)
+  if empty(job_key)
+    let job = run#get_current_buf_job()
+    if empty(job)
+      if type(job) ==# v:t_job
+        call run#print_formatted('WarningMsg', 'Job already finished.')
+        return
+      endif
+      call run#print_formatted('ErrorMsg',
+          \ 'Please provide a job key or focus your cursor on the window'
+          \ . ' of an active log buffer.'
+          \ )
+      return
+    endif
+    let job_key = job['timestamp']
+  endif
+
+  if !has_key(s:run_jobs, job_key)
     call run#print_formatted('ErrorMsg', 'Job key not found.')
     return
   endif
-  let job = s:run_jobs[a:job_key]
+  let job = s:run_jobs[job_key]
   if job['status'] !=# 'RUNNING'
     if !s:run_killall_ongoing
-      echom 'Job already finished.'
+      call run#print_formatted('WarningMsg', 'Job already finished.')
     endif
     return 0
   else
@@ -299,12 +320,25 @@ function! run#RunClear(status_list)
         \ )
 endfunction
 
-function! run#RunSaveLog(job_key)
-  if !has_key(s:run_jobs, a:job_key)
+function! run#RunSaveLog(...)
+  let job_key = get(a:, 1)
+  if empty(job_key)
+    let job = run#get_current_buf_job()
+    if type(job) !=# v:t_job
+      call run#print_formatted('ErrorMsg',
+          \ 'Please provide a job key or focus your cursor on the window'
+          \ . ' of an active log buffer.'
+          \ )
+      return
+    endif
+    let job_key = job['timestamp']
+  endif
+
+  if !has_key(s:run_jobs, job_key)
     call run#print_formatted('ErrorMsg', 'Job key not found.')
     return
   endif
-  let job = s:run_jobs[a:job_key]
+  let job = s:run_jobs[job_key]
   if job['status'] ==# 'RUNNING'
     call run#print_formatted('ErrorMsg', 'Cannot save the logs of a running job.')
     return
@@ -315,7 +349,7 @@ function! run#RunSaveLog(job_key)
   endif
   if !bufexists(job['bufname'])
     call run#print_formatted('ErrorMsg', 'Buffer already wiped.')
-    unlet s:run_jobs[a:job_key]
+    unlet s:run_jobs[job_key]
     return
   endif
 
@@ -397,17 +431,14 @@ function! run#cmd_input_finished()
   call delete(fname)
 endfunction
 
-function! run#get_current_buf_job()
-  " check if current buffer is a job
+function! run#get_current_buf_job(...)
+  " check if current buffer is an active job
+  let options = get(a:, 1, {})
   let curr = bufname('%')
+
   for job_info in s:run_jobs->values()
     if job_info['bufname'] ==# curr
-      if job_info['status'] !=# 'RUNNING'
-        call run#print_formatted('ErrorMsg', 'Job already finished.')
-        return
-      else
-        return job_info['job']
-      endif
+      return job_info['job']
     endif
   endfor
 endfunction

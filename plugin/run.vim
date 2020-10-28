@@ -48,7 +48,7 @@ command RunAgain :call run#RunAgain()
 command RunAgainEdit :call run#RunAgainEdit()
 command -nargs=* -complete=file RunSendKeys :call run#RunSendKeys(<q-args>)
 
-command -nargs=1 -complete=custom,run#list_running_jobs RunKill :call run#RunKill(<q-args>)
+command -nargs=? -complete=custom,run#list_running_jobs RunKill :call run#RunKill(<q-args>)
 command RunKillAll :call run#RunKillAll()
 
 command RunListToggle :call run#RunListToggle()
@@ -57,6 +57,6 @@ command RunClearDone :call run#RunClear(['DONE'])
 command RunClearFailed :call run#RunClear(['FAILED'])
 command RunClearKilled :call run#RunClear(['KILLED'])
 
-command -nargs=1 -complete=custom,run#list_unsaved_jobs RunSaveLog :call run#RunSaveLog(<q-args>)
+command -nargs=? -complete=custom,run#list_unsaved_jobs RunSaveLog :call run#RunSaveLog(<q-args>)
 command -nargs=? RunBrowseLogs :call run#RunBrowseLogs(<args>)
 command RunDeleteLogs :call run#RunDeleteLogs()
