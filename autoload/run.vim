@@ -110,6 +110,7 @@ function! run#Run(cmd, ...)
         \ }
 
   let is_nostream = get(options, 'nostream') || g:run_nostream_default
+  let is_save = g:run_autosave_logs || is_nostream
   let ext_options = {}
   if is_nostream
     let ext_options['out_io'] = 'file'
@@ -135,7 +136,7 @@ function! run#Run(cmd, ...)
         \ 'timestamp': timestamp,
         \ 'job': job,
         \ 'status': 'RUNNING',
-        \ 'save': g:run_autosave_logs,
+        \ 'save': is_save,
         \ 'options': options
         \ }
   let s:run_jobs[timestamp] = job_obj
@@ -437,6 +438,13 @@ function! run#close_cb(channel)
   let job = ch_getjob(a:channel)
   let info = run#get_job_with_object(job)
   let exitval = job_info(info['job'])['exitval']
+
+  " if saved and window unfocused, wipe temp buffer
+  let bufexists = bufnr(info['bufname']) !=# -1
+  let bufisopen = bufwinnr(info['bufname']) ==# -1
+  if info['save'] && bufexists && bufisopen
+    silent exec 'bw! ' . bufnr(info['bufname'])
+  endif
 
   let kill_options = {'quiet': 1, 'msg_format': 'WarningMsg'}
   if s:run_killall_ongoing
