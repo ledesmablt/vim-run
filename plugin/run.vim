@@ -10,7 +10,9 @@
 " prerequisites
 let load_fail = 1
 let fail_msg = 'Could not load vim-run - '
-if !isdirectory('/tmp')
+if v:version < 800
+  let fail_msg .= 'This plugin is only compatible with Vim 8.0 and above.'
+elseif !isdirectory('/tmp')
   let fail_msg .= '/tmp directory not detected.'
 elseif len($SHELL) == 0 && !exists('g:run_shell')
   let fail_msg .= '$SHELL environment variable missing.'
