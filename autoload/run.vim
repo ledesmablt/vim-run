@@ -9,9 +9,14 @@ let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
-let s:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
+
 let s:runeditpath             = get(s:, 'runeditpath')
+let s:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
 let s:run_edit_options        = get(s:, 'run_edit_options', {})
+
+let s:runsendpath             = get(s:, 'runsendpath')
+let s:run_send_cmd_ongoing    = get(s:, 'run_send_cmd_ongoing', 0)
+let s:run_send_timestamp      = get(s:, 'run_send_cmd_ongoing', 0)
 
 " constants
 let s:runcmdpath              = '/tmp/vim-run.'
@@ -20,17 +25,19 @@ let s:editmsg                 = '# Edit your command here. Save and quit to star
 " autocmds
 augroup RunCmdBufInput
   let editglob = '/tmp/vim-run.edit*.sh'
+  let sendglob = '/tmp/vim-run.send*.sh'
   let tempglob = '/tmp/vim-run.*.log'
   let rundirglob = g:rundir . '/*.log'
 
   autocmd!
-  exec 'autocmd BufWinEnter ' . [editglob, rundirglob]->join(',')
+  exec 'autocmd BufWinEnter ' . [editglob, sendglob, rundirglob]->join(',')
         \ . ' setlocal bufhidden=wipe'
-  exec 'autocmd BufWinEnter ' . [editglob, rundirglob, tempglob]->join(',')
+  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
         \ . ' setlocal ft=log'
   exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
         \ . ' setlocal noma'
   exec 'autocmd BufWinLeave ' . editglob . ' call run#cmd_input_finished()'
+  exec 'autocmd BufWinLeave ' . sendglob . ' call run#cmd_input_finished({"send":1})'
 augroup END
 
 " init rundir
@@ -81,16 +88,13 @@ function! run#Run(cmd, ...)
     else
       call add(editor_lines, '')
     endif
-    call writefile(editor_lines, s:runeditpath)
-    silent exec 'sp ' . s:runeditpath . ' | normal! G'
-    let s:run_edit_cmd_ongoing = 1
+
+    call run#cmd_input_open_editor(editor_lines, timestamp)
     return
   endif
 
-
   let s:run_last_command = a:cmd
   let s:run_last_options = options
-
   let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
@@ -205,8 +209,21 @@ function! run#RunAgainEdit()
   let s:run_last_options = new_opts
 endfunction
 
-function! run#RunSendKeys(cmd)
-  let job = run#get_current_buf_job()
+function! run#RunSendKeys(cmd, ...)
+  let options = get(a:, 1, {})
+  let is_from_editor = get(options, 'is_from_editor')
+
+  if is_from_editor
+    if !has_key(s:run_jobs, s:run_send_timestamp)
+      call run#print_formatted('ErrorMsg', 'Job already cleared.')
+      return
+    endif
+    let job = s:run_jobs[s:run_send_timestamp]['job']
+    let s:run_send_timestamp = ''
+  else
+    let job = run#get_current_buf_job()
+  endif
+
   if empty(job)
     if type(job) ==# v:t_job
       call run#print_formatted('WarningMsg', 'Job already finished.')
@@ -218,10 +235,16 @@ function! run#RunSendKeys(cmd)
     return
   endif
 
+  let job_info = run#get_job_with_object(job)
+  let timestamp = job_info['timestamp']
+  let editor_lines = [s:editmsg, '', '']
+
   if empty(a:cmd->trim())
-    call run#print_formatted('ErrorMsg',
-        \ 'Please provide text to send to a running job.'
-        \ )
+    if is_from_editor
+      call run#print_formatted('WarningMsg', 'User cancelled command input.')
+    else
+      call run#cmd_input_open_editor(editor_lines, timestamp, {'is_send': 1})
+    endif
     return
   endif
 
@@ -413,7 +436,26 @@ endfunction
 
 
 " utility
-function! run#cmd_input_finished()
+function! run#cmd_input_open_editor(editor_lines, timestamp, ...)
+  let options = get(a:, 1, {})
+  let is_send = get(options, 'is_send')
+  let prefix = is_send ? 'send-' : 'edit-'
+
+  let editorpath = s:runcmdpath . prefix . a:timestamp . '.sh'
+  if is_send
+    let s:run_send_cmd_ongoing = 1
+    let s:runsendpath = editorpath
+    let s:run_send_timestamp = a:timestamp
+  else
+    let s:run_edit_cmd_ongoing = 1
+    let s:runeditpath = editorpath
+  endif
+  call writefile(a:editor_lines, editorpath)
+  silent exec 'sp ' . editorpath . ' | normal! G'
+endfunction
+
+function! run#cmd_input_finished(...)
+  let options = get(a:, 1, {})
   " goto window
   let fname = expand('<afile>')
   let win = bufwinnr(fname)
@@ -426,8 +468,12 @@ function! run#cmd_input_finished()
 
   let s:run_edit_cmd_ongoing = 0
   call extend(s:run_edit_options, {'is_from_editor': 1})
-  call run#Run(cmd_text, s:run_edit_options)
-  let s:run_edit_options = {}
+  if !get(options, 'send')
+    call run#Run(cmd_text, s:run_edit_options)
+    let s:run_edit_options = {}
+  else
+    call run#RunSendKeys(cmd_text, {'is_from_editor': 1})
+  endif
   call delete(fname)
 endfunction
 
