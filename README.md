@@ -1,10 +1,9 @@
 # vim-run
 
 Run, view, and manage UNIX shell commands with ease from your
-favorite code editor. (a work in progress)
+favorite code editor.
 
-<!-- insert gif demo here -->
-
+![vim-run-demo-3](https://user-images.githubusercontent.com/22242264/97441234-73c9e500-1963-11eb-81ae-72bcab2b8b87.gif)
 
 ## Introduction
 
