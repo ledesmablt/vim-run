@@ -180,6 +180,40 @@ function! run#RunAgain()
   call run#Run(s:run_last_command, s:run_last_options)
 endfunction
 
+function! run#RunSendKeys(cmd)
+  if empty(a:cmd->trim())
+    call run#print_formatted('ErrorMsg',
+        \ 'Please provide text to send to a running job.'
+        \ )
+    return
+  endif
+
+  " check if current buffer is a job
+  let curr = bufname('%')
+  let job = ''
+  for job_info in s:run_jobs->values()
+    if job_info['bufname'] ==# curr
+      if job_info['status'] !=# 'RUNNING'
+        call run#print_formatted('ErrorMsg', 'Job already finished.')
+        return
+      else
+        let job = job_info['job']
+        break
+      endif
+    endif
+  endfor
+
+  if empty(job)
+    call run#print_formatted('ErrorMsg',
+        \ 'Please focus your cursor on the window of an active log buffer.'
+        \ )
+    return
+  endif
+
+  " send keys if it checks out
+  call ch_sendraw(job, a:cmd . "\n")
+endfunction
+
 function! run#RunKill(job_key)
   if !has_key(s:run_jobs, a:job_key)
     call run#print_formatted('ErrorMsg', 'Job key not found.')

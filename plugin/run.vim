@@ -45,6 +45,7 @@ command -nargs=* -complete=file RunSplit :call run#RunSplit(<q-args>)
 command -nargs=* -complete=file RunVSplit :call run#RunVSplit(<q-args>)
 command -nargs=* -complete=file RunNoStream :call run#RunNoStream(<q-args>)
 command RunAgain :call run#RunAgain()
+command -nargs=* -complete=file RunSendKeys :call run#RunSendKeys(<q-args>)
 
 command -nargs=1 -complete=custom,run#list_running_jobs RunKill :call run#RunKill(<q-args>)
 command RunKillAll :call run#RunKillAll()
