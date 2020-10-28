@@ -9,8 +9,9 @@ let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
-let g:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
-let g:runeditpath             = get(s:, 'runeditpath')
+let s:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
+let s:runeditpath             = get(s:, 'runeditpath')
+let s:run_edit_options        = get(s:, 'run_edit_options', {})
 
 " constants
 let s:runcmdpath              = '/tmp/vim-run.'
@@ -42,7 +43,7 @@ function! run#Run(cmd, ...)
   endif
 
   " finish editing first
-  if g:run_edit_cmd_ongoing
+  if s:run_edit_cmd_ongoing
     call run#print_formatted('ErrorMsg', 'Please finish editing the current command.')
     return
   endif
@@ -61,16 +62,17 @@ function! run#Run(cmd, ...)
   
   if empty(trim(a:cmd))
     " no text provided in cmd input
-    if g:run_edit_cmd_ongoing
-      call run#print_formatted('ErrorMsg', 'Cancelled command input.')
+    if get(options, 'is_from_editor') 
+      call run#print_formatted('ErrorMsg', 'User cancelled command input.')
       return
     endif
 
     " open file for editing
-    let g:runeditpath = s:runcmdpath . 'edit-' . timestamp . '.sh'
-    call writefile([s:editmsg, '', ''], g:runeditpath)
-    silent exec 'sp ' . g:runeditpath . ' | normal! G'
-    let g:run_edit_cmd_ongoing = 1
+    let s:run_edit_options = options
+    let s:runeditpath = s:runcmdpath . 'edit-' . timestamp . '.sh'
+    call writefile([s:editmsg, '', ''], s:runeditpath)
+    silent exec 'sp ' . s:runeditpath . ' | normal! G'
+    let s:run_edit_cmd_ongoing = 1
     return
   endif
 
@@ -373,8 +375,10 @@ function! run#cmd_input_finished()
         \ ->filter('v:val->trim() !~ "^#" && len(v:val->trim()) > 0')
         \ ->join("\n")
 
-  let g:run_edit_cmd_ongoing = 0
-  call run#Run(cmd_text)
+  let s:run_edit_cmd_ongoing = 0
+  call extend(s:run_edit_options, {'is_from_editor': 1})
+  call run#Run(cmd_text, s:run_edit_options)
+  let s:run_edit_options = {}
   call delete(fname)
 endfunction
 
