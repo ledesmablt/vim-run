@@ -106,9 +106,9 @@ function! run#Run(cmd, ...)
   if get(options, 'watch')
     silent exec 'e ' . temppath
   elseif get(options, 'split')
-    silent exec 'belowr sp ' . temppath
+    silent exec 'sp ' . temppath
   elseif get(options, 'vsplit')
-    silent exec 'rightb vs ' . temppath
+    silent exec 'wincmd k | rightb vs ' . temppath
   endif
   call run#alert_and_update(msg, options)
 endfunction

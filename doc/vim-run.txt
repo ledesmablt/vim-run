@@ -56,7 +56,7 @@ COMMANDS                                                      *vim-run-commands*
     Calls |:Run| <command> and changes the current buffer to the log stream.
 
 :RunSplit <command>                                                  *:RunSplit*
-    Calls |:Run| <command> and opens the log buffer in a window below.
+    Calls |:Run| <command> and opens the log buffer in a window above.
 
 :RunVSplit <command>                                                 *:RunVSplit*
     Calls |:Run| <command> and opens the log buffer in a window to the right.
