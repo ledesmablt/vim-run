@@ -12,8 +12,10 @@ let load_fail = 1
 let fail_msg = 'Could not load vim-run - '
 if !isdirectory('/tmp')
   let fail_msg .= '/tmp directory not detected.'
-elseif len($SHELL) == 0
+elseif len($SHELL) == 0 && !exists('g:run_shell')
   let fail_msg .= '$SHELL environment variable missing.'
+        \ . ' You may assign a shell path to the variable g:run_shell'
+        \ . ' to fix this issue.'
 elseif len($HOME) == 0 && !exists('g:rundir')
   let fail_msg .= "$HOME environment variable missing."
         \ . " You may assign a directory to the variable g:rundir"
@@ -29,6 +31,7 @@ endif
 
 " user vars
 let g:rundir                   = get(g:, 'rundir',  $HOME . '/.vim/rundir')
+let g:run_shell                = get(g:, 'run_shell', $SHELL)
 let g:run_quiet_default        = get(g:, 'run_quiet_default', 0)
 let g:run_autosave_logs        = get(g:, 'run_autosave_logs', 0)
 let g:run_nostream_default     = get(g:, 'run_nostream_default', 0)

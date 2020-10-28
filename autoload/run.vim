@@ -59,7 +59,7 @@ function! run#Run(cmd, ...)
         \ 'printf "STARTED: "',
         \ date_cmd,
         \ 'printf "\n"',
-        \ $SHELL . ' ' . s:runcmdpath,
+        \ g:run_shell . ' ' . s:runcmdpath,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
         \ 'printf "\n$STATUS: "',
@@ -85,7 +85,7 @@ function! run#Run(cmd, ...)
         \ 'out_cb': 'run#out_cb'
         \ })
   endif
-  let job = job_start([$SHELL, execpath]->join(' '), job_options)
+  let job = job_start([g:run_shell, execpath]->join(' '), job_options)
   
   " get job info for global job dict
   let info = job_info(job)

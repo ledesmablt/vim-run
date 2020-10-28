@@ -123,6 +123,12 @@ g:rundir                                                              *g:rundir*
 
         let g:rundir = ~/.vim/rundir           (default)
 <
+g:run_shell                                                        *g:run_shell*
+    The full path of the shell to use when executing any command. Defaults to
+    the $SHELL environment variable. >
+
+        let g:run_shell = $SHELL               (default)
+<
 g:run_quiet_default                                        *g:run_quiet_default*
     If enabled, all |:Run| commands will not open the |RunList| whenever jobs
     start or stop. Note that whenever jobs are updated and the |RunList| is
