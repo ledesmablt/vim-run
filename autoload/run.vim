@@ -55,7 +55,7 @@ function! run#Run(cmd, ...)
     return
   endif
   
-  if len(trim(a:cmd)) ==# 0
+  if empty(trim(a:cmd))
     " no text provided in cmd input
     if g:run_edit_cmd_ongoing
       call run#print_formatted('ErrorMsg', 'Cancelled command input.')
@@ -165,7 +165,7 @@ function! run#RunNoStream(cmd)
 endfunction
 
 function! run#RunAgain()
-  if len(s:run_last_command) ==# 0
+  if empty(s:run_last_command)
     call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
   endif
@@ -192,7 +192,7 @@ endfunction
 function! run#RunKillAll()
   " user confirm
   let running_jobs = run#list_running_jobs()->split("\n")
-  if len(running_jobs) ==# 0
+  if empty(running_jobs)
     call run#print_formatted('WarningMsg', 'No jobs are running.')
     return
   endif
