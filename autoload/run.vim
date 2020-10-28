@@ -82,9 +82,10 @@ function! run#Run(cmd, ...)
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  call writefile([a:cmd], s:runcmdpath)
+  call writefile(a:cmd->split("\n"), s:runcmdpath)
   call writefile([
-        \ 'printf "COMMAND: "', 'cat ' .  s:runcmdpath,
+        \ 'printf "COMMAND: "',
+        \ 'cat ' .  s:runcmdpath . " | sed '2,${s/^/         /g}'",
         \ 'echo WORKDIR: ' . getcwd(),
         \ 'printf "STARTED: "',
         \ date_cmd,
