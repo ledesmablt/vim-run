@@ -95,19 +95,20 @@ function! run#Run(cmd, ...)
   let fname = timestamp . '__' . shortcmd . '.log'
   let fpath = g:rundir . '/' . fname
   let temppath = s:run_cmd_path . timestamp . '.log'
-  let execpath = s:run_cmd_path . 'exec'
+  let execpath = s:run_cmd_path . 'exec-' . timestamp
+  let currentcmdpath = execpath . '.sh'
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  call writefile(a:cmd->split("\n"), s:run_cmd_path)
+  call writefile(a:cmd->split("\n"), currentcmdpath)
   call writefile([
         \ 'printf "COMMAND: "',
-        \ 'cat ' .  s:run_cmd_path . " | sed '2,${s/^/         /g}'",
+        \ 'cat ' .  currentcmdpath . " | sed '2,${s/^/         /g}'",
         \ 'echo WORKDIR: ' . getcwd(),
         \ 'printf "STARTED: "',
         \ date_cmd,
         \ 'printf "\n"',
-        \ g:run_shell . ' ' . s:run_cmd_path,
+        \ g:run_shell . ' ' . currentcmdpath,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
         \ 'printf "\n$STATUS: "',
