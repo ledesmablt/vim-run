@@ -19,12 +19,17 @@ let s:editmsg                 = '# Edit your command here. Save and quit to star
 
 " autocmds
 augroup RunCmdBufInput
-  autocmd!
   let editglob = '/tmp/vim-run.edit*.sh'
+  let tempglob = '/tmp/vim-run.*.log'
   let rundirglob = g:rundir . '/*.log'
+
+  autocmd!
   exec 'autocmd BufWinEnter ' . [editglob, rundirglob]->join(',')
         \ . ' setlocal bufhidden=wipe'
-  exec 'autocmd BufWinEnter ' . rundirglob . ' setlocal noma'
+  exec 'autocmd BufWinEnter ' . [editglob, rundirglob, tempglob]->join(',')
+        \ . ' setlocal ft=log'
+  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
+        \ . ' setlocal noma'
   exec 'autocmd BufWinLeave ' . editglob . ' call run#cmd_input_finished()'
 augroup END
 
