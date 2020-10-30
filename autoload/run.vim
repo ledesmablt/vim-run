@@ -74,6 +74,12 @@ function! run#Run(cmd, ...)
       call run#print_formatted('WarningMsg', 'User cancelled command input.')
       return
     endif
+    
+    " split conflicts with BufWinLeave autocmd
+    if get(options, 'split') || get(options, 'vsplit')
+      call run#print_formatted('ErrorMsg', 'Command editing not available for split mode.')
+      return
+    endif
 
     " open file for editing
     let s:run_edit_options = options
