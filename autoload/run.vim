@@ -30,11 +30,11 @@ augroup RunCmdBufInput
   let rundirglob = g:rundir . '/*.log'
 
   autocmd!
-  exec 'autocmd BufWinEnter ' . [editglob, sendglob, rundirglob]->join(',')
+  exec 'autocmd BufWinEnter ' . join([editglob, sendglob, rundirglob], ',')
         \ . ' setlocal bufhidden=wipe'
-  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
+  exec 'autocmd BufWinEnter ' . join([rundirglob, tempglob], ',')
         \ . ' setlocal ft=log'
-  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
+  exec 'autocmd BufWinEnter ' . join([rundirglob, tempglob], ',')
         \ . ' setlocal noma'
   exec 'autocmd BufWinLeave ' . editglob . ' call run#cmd_input_finished()'
   exec 'autocmd BufWinLeave ' . sendglob . ' call run#cmd_input_finished({"send":1})'
@@ -86,7 +86,7 @@ function! run#Run(cmd, ...) abort
     let s:run_edit_path = s:run_cmd_path . 'edit-' . timestamp . '.sh'
     let editor_lines = [s:edit_msg, '']
     if get(options, 'edit_last')
-      call extend(editor_lines, s:run_last_command->split("\n"))
+      call extend(editor_lines, split(s:run_last_command, "\n"))
     else
       call add(editor_lines, '')
     endif
@@ -106,7 +106,7 @@ function! run#Run(cmd, ...) abort
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  call writefile(a:cmd->split("\n"), currentcmdpath)
+  call writefile(split(a:cmd, "\n"), currentcmdpath)
   call writefile([
         \ 'printf "COMMAND: "',
         \ 'cat ' .  currentcmdpath . " | sed '2,${s/^/         /g}'",
@@ -144,7 +144,7 @@ function! run#Run(cmd, ...) abort
     endif
   endif
   call extend(job_options, ext_options)
-  let job = job_start([g:run_shell, execpath]->join(' '), job_options)
+  let job = job_start(join([g:run_shell, execpath], ' '), job_options)
   
   " get job info for global job dict
   let info = job_info(job)
@@ -248,7 +248,7 @@ function! run#RunSendKeys(cmd, ...) abort
   let timestamp = job_info['timestamp']
   let editor_lines = [s:edit_msg, '', '']
 
-  if empty(a:cmd->trim())
+  if empty(trim(a:cmd))
     if is_from_editor
       call run#print_formatted('WarningMsg', 'User cancelled command input.')
     else
@@ -297,7 +297,7 @@ endfunction
 
 function! run#RunKillAll() abort
   " user confirm
-  let running_jobs = run#list_running_jobs()->split("\n")
+  let running_jobs = split(run#list_running_jobs(), "\n")
   if empty(running_jobs)
     call run#print_formatted('WarningMsg', 'No jobs are running.')
     return
@@ -330,7 +330,7 @@ function! run#RunClear(status_list) abort
   endif
   " user confirm
   let confirm = input(
-        \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
+        \ 'Clear all jobs with status ' . join(a:status_list, '/') . '? (Y/n) '
         \ )
   if confirm !=? 'Y'
     return
@@ -338,8 +338,8 @@ function! run#RunClear(status_list) abort
 
   " remove all jobs that match status_list
   let clear_count = 0
-  for job in s:run_jobs->values()
-    let status_match = a:status_list->index(job['status']) >= 0
+  for job in values(s:run_jobs)
+    let status_match = index(a:status_list, job['status']) >= 0
     if status_match
       silent exec 'bw! ' . job['bufname']
       unlet s:run_jobs[job['timestamp']]
@@ -411,12 +411,12 @@ function! run#RunBrowseLogs(...) abort
         \ " | xargs -n 1 -I FILE" .
         \ " sh -c 'printf \"FILE \" && echo $(head -1 FILE)'"
   let qf_output = []
-  for entry in system(cmd_get_files)->trim()->split("\n")
+  for entry in split(trim(system(cmd_get_files)), "\n")
     let qf_item = {}
     let split_str = ' COMMAND: '
-    let split_cmd = entry->split(split_str)
+    let split_cmd = split(entry, split_str)
     let qf_item['filename'] = split_cmd[0]
-    let qf_item['text'] = 'SAVED - ' . split_cmd[1:]->join(split_str)
+    let qf_item['text'] = 'SAVED - ' . join(split_cmd[1:], split_str)
     call add(qf_output, qf_item)
   endfor
 
@@ -442,7 +442,7 @@ function! run#RunDeleteLogs() abort
   endif
   call system('rm ' . g:rundir . '/*.log')
 
-  let qf_title = getqflist({'title': 1})->get('title')
+  let qf_title = get(getqflist({'title': 1}), 'title')
   if run#is_qf_open() && qf_title ==# 'RunLogs'
     silent call setqflist([])
     silent call setqflist([], 'a', {'title': 'RunLogs'})
@@ -478,9 +478,9 @@ function! run#cmd_input_finished(...)
   silent exec win . 'wincmd w'
 
   " keep only non-comment lines w/ text, join to one line
-  let cmd_text = getline(1, '$')
-        \ ->filter('v:val->trim() !~ "^#" && len(v:val->trim()) > 0')
-        \ ->join("\n")
+  let cmd_text = join(filter(getline(1, '$'),
+        \ 'trim(v:val) !~ "^#" && len(trim(v:val)) > 0'),
+        \ "\n")
 
   call extend(s:run_edit_options, {'is_from_editor': 1})
   if !get(options, 'send')
@@ -499,7 +499,7 @@ function! run#get_current_buf_job(...)
   let options = get(a:, 1, {})
   let curr = bufname('%')
 
-  for job_info in s:run_jobs->values()
+  for job_info in values(s:run_jobs)
     if job_info['bufname'] ==# curr
       return job_info['job']
     endif
@@ -508,7 +508,7 @@ endfunction
 
 function! run#update_run_jobs()
   let qf_output = []
-  let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
+  let run_jobs_sorted = reverse(sort(values(s:run_jobs), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
@@ -557,7 +557,7 @@ endfunction
 
 function! run#get_job_with_object(job)
   let pid = job_info(a:job)['process']
-  for job in s:run_jobs->values()
+  for job in values(s:run_jobs)
     if job['pid'] ==# pid
       return job
     endif
@@ -565,13 +565,17 @@ function! run#get_job_with_object(job)
 endfunction
 
 function! run#list_running_jobs(...)
-  return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
-        \ ->keys()->join("\n")
+  return join(keys(
+        \ filter(deepcopy(s:run_jobs),
+        \ 'v:val.status ==# "RUNNING"')
+        \  ), "\n")
 endfunction
 
 function! run#list_unsaved_jobs(...)
-  return deepcopy(s:run_jobs)->filter('v:val.save ==# 0 && v:val.status !=# "RUNNING"')
-        \ ->keys()->join("\n")
+  return join(keys(
+        \ filter(deepcopy(s:run_jobs),
+        \ 'v:val.save ==# 0 && v:val.status !=# "RUNNING"')
+        \  ), "\n")
 endfunction
 
 function! run#is_qf_open()
