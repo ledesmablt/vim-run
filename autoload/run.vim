@@ -47,7 +47,7 @@ endif
 
 
 " main functions
-function! run#Run(cmd, ...)
+function! run#Run(cmd, ...) abort
   let options = get(a:, 1, {})
 
   " finish editing first
@@ -72,6 +72,12 @@ function! run#Run(cmd, ...)
     " no text provided in cmd input
     if get(options, 'is_from_editor') && !get(options, 'edit_last')
       call run#print_formatted('WarningMsg', 'User cancelled command input.')
+      return
+    endif
+    
+    " split conflicts with BufWinLeave autocmd
+    if get(options, 'split') || get(options, 'vsplit')
+      call run#print_formatted('ErrorMsg', 'Command editing not available for split mode.')
       return
     endif
 
@@ -166,27 +172,27 @@ function! run#Run(cmd, ...)
   call run#alert_and_update(msg, options)
 endfunction
 
-function! run#RunQuiet(cmd)
+function! run#RunQuiet(cmd) abort
   call run#Run(a:cmd, { 'quiet': 1 })
 endfunction
 
-function! run#RunWatch(cmd)
+function! run#RunWatch(cmd) abort
   call run#Run(a:cmd, { 'watch': 1, 'quiet': 1 })
 endfunction
 
-function! run#RunSplit(cmd)
+function! run#RunSplit(cmd) abort
   call run#Run(a:cmd, { 'split': 1 })
 endfunction
 
-function! run#RunVSplit(cmd)
+function! run#RunVSplit(cmd) abort
   call run#Run(a:cmd, { 'vsplit': 1 })
 endfunction
 
-function! run#RunNoStream(cmd)
+function! run#RunNoStream(cmd) abort
   call run#Run(a:cmd, { 'nostream': 1 })
 endfunction
 
-function! run#RunAgain()
+function! run#RunAgain() abort
   if empty(s:run_last_command)
     call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
@@ -194,7 +200,7 @@ function! run#RunAgain()
   call run#Run(s:run_last_command, s:run_last_options)
 endfunction
 
-function! run#RunAgainEdit()
+function! run#RunAgainEdit() abort
   if empty(s:run_last_command)
     call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
@@ -206,7 +212,7 @@ function! run#RunAgainEdit()
   let s:run_last_options = new_opts
 endfunction
 
-function! run#RunSendKeys(cmd, ...)
+function! run#RunSendKeys(cmd, ...) abort
   let options = get(a:, 1, {})
 
   " finish editing first
@@ -255,7 +261,7 @@ function! run#RunSendKeys(cmd, ...)
   call ch_sendraw(job, a:cmd . "\n")
 endfunction
 
-function! run#RunKill(...)
+function! run#RunKill(...) abort
   let job_key = get(a:, 1)
   if empty(job_key)
     let job = run#get_current_buf_job()
@@ -289,7 +295,7 @@ function! run#RunKill(...)
   endif
 endfunction
 
-function! run#RunKillAll()
+function! run#RunKillAll() abort
   " user confirm
   let running_jobs = run#list_running_jobs()->split("\n")
   if empty(running_jobs)
@@ -308,7 +314,7 @@ function! run#RunKillAll()
   endfor
 endfunction
 
-function! run#RunListToggle()
+function! run#RunListToggle() abort
   if run#is_qf_open()
     cclose
   else
@@ -317,7 +323,7 @@ function! run#RunListToggle()
   endif
 endfunction
 
-function! run#RunClear(status_list)
+function! run#RunClear(status_list) abort
   if len(s:run_jobs) == 0
     call run#print_formatted('WarningMsg', 'The RunList is already clear.')
     return
@@ -346,7 +352,7 @@ function! run#RunClear(status_list)
         \ )
 endfunction
 
-function! run#RunSaveLog(...)
+function! run#RunSaveLog(...) abort
   let job_key = get(a:, 1)
   let is_from_current_buf = 0
   if empty(job_key)
@@ -392,7 +398,7 @@ function! run#RunSaveLog(...)
   call run#alert_and_update('Logs saved to ' . job['filename'], {'quiet': 1})
 endfunction
 
-function! run#RunBrowseLogs(...)
+function! run#RunBrowseLogs(...) abort
   let limit = get(a:, 1, g:run_browse_default_limit)
   if type(limit) !=# 0  || limit <= 0
     " must be positive number
@@ -424,7 +430,7 @@ function! run#RunBrowseLogs(...)
   endif
 endfunction
 
-function! run#RunDeleteLogs()
+function! run#RunDeleteLogs() abort
   " user confirm
   if len(run#list_running_jobs()) > 0
     call run#print_formatted('ErrorMsg', 'Cannot delete logs while jobs are running.')
