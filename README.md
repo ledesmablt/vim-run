@@ -3,11 +3,15 @@
 Run, view, and manage UNIX shell commands with ease from your
 favorite code editor.
 
-![vim-run-demo-3](https://user-images.githubusercontent.com/22242264/97441234-73c9e500-1963-11eb-81ae-72bcab2b8b87.gif)
+![vim-run-demo](https://user-images.githubusercontent.com/22242264/97441234-73c9e500-1963-11eb-81ae-72bcab2b8b87.gif)
+
+## Requirements
+This plugin relies on [channels](https://vimhelp.org/channel.txt.html), introduced in Vim 8.0.
+This is not yet supported in Neovim because of its different implementation of
+[job control](https://neovim.io/doc/user/job_control.html).
 
 ## Introduction
-
-Running external commands with vim has always been clunky to work with.
+Running external commands with Vim has always been clunky to work with.
 ```
 :!apt update                          (can't edit while running)
 :!apt update &                        (stdout hijacks your screen)
@@ -19,7 +23,7 @@ terminal (maybe with `:term`, `tmux`, or a new window in your OS) and run your
 command from there.
 
 But what if you don't want to worry about managing several active terminal
-sessions? Maybe you'd prefer to just keep one window open - vim - and run
+sessions? Maybe you'd prefer to just keep one window open - Vim - and run
 processes without losing too much screen real estate.
 
 This plugin attempts to solve that problem and provide a more intuitive

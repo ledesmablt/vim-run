@@ -10,14 +10,15 @@
 CONTENTS                                                               *vim-run*
 
     1. Intro                                                     |vim-run-intro|
-    2. Commands                                               |vim-run-commands|
-    3. Configuration                                     |vim-run-configuration|
-    4. About                                                     |vim-run-about|
+    2. Requirements                                       |vim-run-requirements|
+    3. Commands                                               |vim-run-commands|
+    4. Configuration                                     |vim-run-configuration|
+    5. About                                                     |vim-run-about|
 
 ==============================================================================
 INTRO                                                            *vim-run-intro*
 
-Running external commands with vim has always been clunky to work with. >
+Running external commands with Vim has always been clunky to work with. >
     :!apt update                      (can't edit while running)
     :!apt update &                    (stdout hijacks your screen)
     :!apt update > some/file.log &    (logs available only when done)
@@ -27,11 +28,18 @@ terminal (maybe with `:term`, tmux, or a new window in your OS) and run your
 command from there.
 
 But what if you don't want to worry about managing several active terminal
-sessions? Maybe you'd prefer to just keep one window open - vim - and run
+sessions? Maybe you'd prefer to just keep one window open - Vim - and run
 processes without losing too much screen real estate.
 
 This plugin attempts to solve that problem and provide a more intuitive
 experience around running processess asynchronously.
+
+==============================================================================
+REQUIREMENTS                                              *vim-run-requirements*
+
+This plugin relies on |channel|s, introduced in Vim 8.0. This is currently not
+yet supported in Neovim because of its different implementation of job
+control.
 
 ==============================================================================
 COMMANDS                                                      *vim-run-commands*
@@ -48,7 +56,7 @@ COMMANDS                                                      *vim-run-commands*
     under |g:rundir| (automatic if |g:run_autosave_logs| is enabled).
 
     The job is killed when the user runs |:RunKill|, |:RunKillAll|,
-    or leaves vim.
+    or leaves Vim.
 
 :RunQuiet [<command>]                                                *:RunQuiet*
     Calls |:Run| <command> but doesn't open the |RunList| when the job starts
@@ -159,7 +167,7 @@ g:run_quiet_default                                        *g:run_quiet_default*
 g:run_autosave_logs                                        *g:run_autosave_logs*
     If enabled, all log files will be saved in |g:rundir| once the job stops.
     Otherwise, logs will only be streamed to the buffers and will be lost once
-    the user either deletes the buffer or leaves vim. >
+    the user either deletes the buffer or leaves Vim. >
 
         let g:run_autosave_logs = 0            (default)
 <
