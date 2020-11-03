@@ -119,19 +119,20 @@ function! run#Run(cmd, ...) abort
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
+  let startline = has('nvim') ? 1 : 2
   call writefile(split(a:cmd, "\n"), currentcmdpath)
   call writefile([
         \ 'printf "COMMAND: "',
-        \ 'cat ' .  currentcmdpath . " | sed '2,${s/^/         /g}'",
+        \ 'cat ' .  currentcmdpath . " | sed '".startline.",${s/^/         /g}'",
         \ 'echo WORKDIR: ' . getcwd(),
-        \ 'printf "STARTED: "',
-        \ date_cmd,
+        \ 'STARTED=$('.date_cmd.')',
+        \ 'echo "STARTED: $STARTED"',
         \ 'printf "\n"',
         \ g:run_shell . ' ' . currentcmdpath,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
-        \ 'printf "\n$STATUS: "',
-        \ date_cmd,
+        \ 'FINISHED=$('.date_cmd.')',
+        \ 'echo "\n$STATUS: $FINISHED"',
         \ 'exit $EXITVAL',
         \ ], execpath)
 
@@ -637,7 +638,14 @@ function! run#out_cb(channel, msg, ...)
   let job_obj = has('nvim') ? a:channel : ch_getjob(a:channel)
   let job = run#get_job_with_object(job_obj)
   let fname = job['filename']
-  let output = has('nvim') ? a:msg : [a:msg]
+  if has('nvim')
+    let output = a:msg
+    if empty(trim(output[-1]))
+      let output = output[:-2]
+    endif
+  else
+    let output = [a:msg]
+  endif
   call writefile(output, fname, "a")
 endfunction
 
