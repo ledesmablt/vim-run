@@ -31,7 +31,11 @@ augroup RunCmdBufInput
   let rundirglob = g:rundir . '/*.log'
 
   autocmd!
-  exec 'autocmd BufWinEnter ' . join([editglob, sendglob, rundirglob], ',')
+  let wipe_bufs = [editglob, sendglob, rundirglob]
+  if has('nvim')
+    call remove(wipe_bufs, -1)
+  endif
+  exec 'autocmd BufWinEnter ' . join(wipe_bufs, ',')
         \ . ' setlocal bufhidden=wipe'
   exec 'autocmd BufWinEnter ' . join([rundirglob, tempglob], ',')
         \ . ' setlocal ft=log'
