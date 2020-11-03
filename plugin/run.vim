@@ -39,6 +39,14 @@ let g:run_autosave_logs        = get(g:, 'run_autosave_logs', 0)
 let g:run_nostream_default     = get(g:, 'run_nostream_default', 0)
 let g:run_browse_default_limit = get(g:, 'run_browse_default_limit', 10)
 
+" warnings
+if has('nvim') && !g:run_nostream_default
+  call run#print_formatted('WarningMsg',
+        \ 'Streaming logs to an output buffer is not supported in Neovim.'
+        \ . ' All commands will default to RunNoStream.'
+        \ . ' Set g:run_nostream_default = 1 to disable this warning.')
+endif
+
 " commands
 command -nargs=* -complete=file Run :call run#Run(<q-args>)
 command -nargs=* -complete=file RunQuiet :call run#RunQuiet(<q-args>)
