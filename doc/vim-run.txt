@@ -37,9 +37,9 @@ experience around running processess asynchronously.
 ==============================================================================
 REQUIREMENTS                                              *vim-run-requirements*
 
-This plugin relies on |channel|s, introduced in Vim 8.0. This is currently not
-yet supported in Neovim because of its different implementation of job
-control.
+This plugin relies on |channel|s, introduced in Vim 8.0. This is only
+partially supported in Neovim because of its different implementation of job
+control (for nvim users, see |job-control|).
 
 ==============================================================================
 COMMANDS                                                      *vim-run-commands*

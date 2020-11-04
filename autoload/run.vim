@@ -9,6 +9,7 @@ let s:run_last_command        = get(s:, 'run_last_command', '')
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
+let s:run_jobs_to_kill_nvim   = get(s:, 'run_jobs_to_kill_nvim', [])
 
 let s:run_edit_path           = get(s:, 'run_edit_path')
 let s:run_edit_cmd_ongoing    = get(s:, 'run_edit_cmd_ongoing', 0)
@@ -30,11 +31,15 @@ augroup RunCmdBufInput
   let rundirglob = g:rundir . '/*.log'
 
   autocmd!
-  exec 'autocmd BufWinEnter ' . [editglob, sendglob, rundirglob]->join(',')
+  let wipe_bufs = [editglob, sendglob, rundirglob]
+  if has('nvim')
+    call remove(wipe_bufs, -1)
+  endif
+  exec 'autocmd BufWinEnter ' . join(wipe_bufs, ',')
         \ . ' setlocal bufhidden=wipe'
-  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
+  exec 'autocmd BufWinEnter ' . join([rundirglob, tempglob], ',')
         \ . ' setlocal ft=log'
-  exec 'autocmd BufWinEnter ' . [rundirglob, tempglob]->join(',')
+  exec 'autocmd BufWinEnter ' . join([rundirglob, tempglob], ',')
         \ . ' setlocal noma'
   exec 'autocmd BufWinLeave ' . editglob . ' call run#cmd_input_finished()'
   exec 'autocmd BufWinLeave ' . sendglob . ' call run#cmd_input_finished({"send":1})'
@@ -49,6 +54,14 @@ endif
 " main functions
 function! run#Run(cmd, ...) abort
   let options = get(a:, 1, {})
+  if has('nvim')
+    let options['nostream'] = 1
+    if get(options, 'split') || get(options, 'vsplit')
+      call run#print_formatted('ErrorMsg',
+            \ 'Streaming output to a buffer is not supported in Neovim.')
+      return
+    endif
+  endif
 
   " finish editing first
   if s:run_edit_cmd_ongoing
@@ -86,7 +99,7 @@ function! run#Run(cmd, ...) abort
     let s:run_edit_path = s:run_cmd_path . 'edit-' . timestamp . '.sh'
     let editor_lines = [s:edit_msg, '']
     if get(options, 'edit_last')
-      call extend(editor_lines, s:run_last_command->split("\n"))
+      call extend(editor_lines, split(s:run_last_command, "\n"))
     else
       call add(editor_lines, '')
     endif
@@ -106,19 +119,20 @@ function! run#Run(cmd, ...) abort
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  call writefile(a:cmd->split("\n"), currentcmdpath)
+  let startline = has('nvim') ? 1 : 2
+  call writefile(split(a:cmd, "\n"), currentcmdpath)
   call writefile([
         \ 'printf "COMMAND: "',
-        \ 'cat ' .  currentcmdpath . " | sed '2,${s/^/         /g}'",
+        \ 'cat ' .  currentcmdpath . " | sed '".startline.",${s/^/         /g}'",
         \ 'echo WORKDIR: ' . getcwd(),
-        \ 'printf "STARTED: "',
-        \ date_cmd,
+        \ 'STARTED=$('.date_cmd.')',
+        \ 'echo "STARTED: $STARTED"',
         \ 'printf "\n"',
         \ g:run_shell . ' ' . currentcmdpath,
         \ 'EXITVAL=$?',
         \ 'STATUS=$([ $EXITVAL -eq 0 ] && echo "FINISHED" || echo "FAILED (status $EXITVAL)")',
-        \ 'printf "\n$STATUS: "',
-        \ date_cmd,
+        \ 'FINISHED=$('.date_cmd.')',
+        \ 'echo "\n$STATUS: $FINISHED"',
         \ 'exit $EXITVAL',
         \ ], execpath)
 
@@ -143,13 +157,28 @@ function! run#Run(cmd, ...) abort
       let ext_options['out_cb'] = 'run#out_cb'
     endif
   endif
+
+  " nvim overrides
+  if has('nvim')
+    let ext_options = {}
+    let ext_options['on_exit'] = 'run#close_cb'
+    let ext_options['on_stdout'] = 'run#out_cb'
+    let ext_options['out_name'] = fpath
+    " let ext_options['stdout_buffered'] = v:true
+  endif
+
   call extend(job_options, ext_options)
-  let job = job_start([g:run_shell, execpath]->join(' '), job_options)
+  if has('nvim')
+    let job = jobstart(join([g:run_shell, execpath], ' '), job_options)
+    let pid = job
+  else
+    let job = job_start(join([g:run_shell, execpath], ' '), job_options)
+    let pid = job_info(job)['process']
+  endif
   
   " get job info for global job dict
-  let info = job_info(job)
   let job_obj = {
-        \ 'pid': info['process'],
+        \ 'pid': pid,
         \ 'command': a:cmd,
         \ 'bufname': (is_nostream ? fpath : temppath),
         \ 'filename': fpath,
@@ -213,6 +242,11 @@ function! run#RunAgainEdit() abort
 endfunction
 
 function! run#RunSendKeys(cmd, ...) abort
+  if has('nvim')
+    call run#print_formatted('ErrorMsg',
+          \ 'Sending keys to a running job is not supported in Neovim.')
+    return
+  endif
   let options = get(a:, 1, {})
 
   " finish editing first
@@ -248,7 +282,7 @@ function! run#RunSendKeys(cmd, ...) abort
   let timestamp = job_info['timestamp']
   let editor_lines = [s:edit_msg, '', '']
 
-  if empty(a:cmd->trim())
+  if empty(trim(a:cmd))
     if is_from_editor
       call run#print_formatted('WarningMsg', 'User cancelled command input.')
     else
@@ -290,14 +324,18 @@ function! run#RunKill(...) abort
     endif
     return 0
   else
-    call job_stop(job['job'], 'kill')
+    if has('nvim')
+      call jobstop(job['job'])
+    else
+      call job_stop(job['job'], 'kill')
+    endif
     return 1
   endif
 endfunction
 
 function! run#RunKillAll() abort
   " user confirm
-  let running_jobs = run#list_running_jobs()->split("\n")
+  let running_jobs = split(run#list_running_jobs(), "\n")
   if empty(running_jobs)
     call run#print_formatted('WarningMsg', 'No jobs are running.')
     return
@@ -307,8 +345,19 @@ function! run#RunKillAll() abort
   if confirm !=? 'Y'
     return
   endif
+
+  " in case user confirms late and jobs have stopped
+  let running_jobs = split(run#list_running_jobs(), "\n")
+  if empty(running_jobs)
+    call run#print_formatted('WarningMsg', 'All jobs have finished running.')
+    return
+  endif
+
   let s:run_killed_jobs = 0
   let s:run_killall_ongoing = len(running_jobs)
+  if has('nvim')
+    let s:run_jobs_to_kill_nvim = running_jobs
+  endif
   for job_key in running_jobs
     call run#RunKill(job_key)
   endfor
@@ -330,7 +379,7 @@ function! run#RunClear(status_list) abort
   endif
   " user confirm
   let confirm = input(
-        \ 'Clear all jobs with status ' . a:status_list->join('/') . '? (Y/n) '
+        \ 'Clear all jobs with status ' . join(a:status_list, '/') . '? (Y/n) '
         \ )
   if confirm !=? 'Y'
     return
@@ -338,10 +387,12 @@ function! run#RunClear(status_list) abort
 
   " remove all jobs that match status_list
   let clear_count = 0
-  for job in s:run_jobs->values()
-    let status_match = a:status_list->index(job['status']) >= 0
+  for job in values(s:run_jobs)
+    let status_match = index(a:status_list, job['status']) >= 0
     if status_match
-      silent exec 'bw! ' . job['bufname']
+      if get(job, 'bufname')
+        silent exec 'bw! ' . job['bufname']
+      endif
       unlet s:run_jobs[job['timestamp']]
       let clear_count += 1
     endif
@@ -411,12 +462,12 @@ function! run#RunBrowseLogs(...) abort
         \ " | xargs -n 1 -I FILE" .
         \ " sh -c 'printf \"FILE \" && echo $(head -1 FILE)'"
   let qf_output = []
-  for entry in system(cmd_get_files)->trim()->split("\n")
+  for entry in split(trim(system(cmd_get_files)), "\n")
     let qf_item = {}
     let split_str = ' COMMAND: '
-    let split_cmd = entry->split(split_str)
+    let split_cmd = split(entry, split_str)
     let qf_item['filename'] = split_cmd[0]
-    let qf_item['text'] = 'SAVED - ' . split_cmd[1:]->join(split_str)
+    let qf_item['text'] = 'SAVED - ' . join(split_cmd[1:], split_str)
     call add(qf_output, qf_item)
   endfor
 
@@ -442,7 +493,7 @@ function! run#RunDeleteLogs() abort
   endif
   call system('rm ' . g:rundir . '/*.log')
 
-  let qf_title = getqflist({'title': 1})->get('title')
+  let qf_title = get(getqflist({'title': 1}), 'title')
   if run#is_qf_open() && qf_title ==# 'RunLogs'
     silent call setqflist([])
     silent call setqflist([], 'a', {'title': 'RunLogs'})
@@ -478,9 +529,9 @@ function! run#cmd_input_finished(...)
   silent exec win . 'wincmd w'
 
   " keep only non-comment lines w/ text, join to one line
-  let cmd_text = getline(1, '$')
-        \ ->filter('v:val->trim() !~ "^#" && len(v:val->trim()) > 0')
-        \ ->join("\n")
+  let cmd_text = join(filter(getline(1, '$'),
+        \ 'trim(v:val) !~ "^#" && len(trim(v:val)) > 0'),
+        \ "\n")
 
   call extend(s:run_edit_options, {'is_from_editor': 1})
   if !get(options, 'send')
@@ -499,7 +550,7 @@ function! run#get_current_buf_job(...)
   let options = get(a:, 1, {})
   let curr = bufname('%')
 
-  for job_info in s:run_jobs->values()
+  for job_info in values(s:run_jobs)
     if job_info['bufname'] ==# curr
       return job_info['job']
     endif
@@ -508,28 +559,22 @@ endfunction
 
 function! run#update_run_jobs()
   let qf_output = []
-  let run_jobs_sorted = reverse(sort(s:run_jobs->values(), {
+  let run_jobs_sorted = reverse(sort(values(s:run_jobs), {
         \ v1, v2 -> v1.timestamp ==# v2.timestamp ? 0 
         \ : v1.timestamp > v2.timestamp ? 1 : -1
         \ }))
   for val in run_jobs_sorted
     let qf_item = {}
-    let status = job_status(val['job'])
     let is_nostream = get(val['options'], 'nostream')
 
     " set the qf buffer / file to open
-    if is_nostream || (status !=# 'run' && val['save'])
+    let status = val['status']
+    if is_nostream || (status !=# 'RUNNING' && val['save'])
       let qf_item['filename'] = val['filename']
     else
       let qf_item['bufnr'] = bufnr(val['bufname'])
     endif
     " set the qf message (status)
-    if status ==# 'run'
-      let status = 'RUNNING'
-    else
-      let exitval = job_info(val['job'])['exitval']
-      let status = exitval ==# 0 ? 'DONE' : exitval ==# -1 ? 'KILLED' : 'FAILED'
-    endif
     let qf_item['text'] = status . ' - ' . val['command']
 
     " update output and global jobs dict
@@ -556,8 +601,8 @@ function! run#alert_and_update(content, ...)
 endfunction
 
 function! run#get_job_with_object(job)
-  let pid = job_info(a:job)['process']
-  for job in s:run_jobs->values()
+  let pid = has('nvim') ? a:job : job_info(a:job)['process']
+  for job in values(s:run_jobs)
     if job['pid'] ==# pid
       return job
     endif
@@ -565,13 +610,17 @@ function! run#get_job_with_object(job)
 endfunction
 
 function! run#list_running_jobs(...)
-  return deepcopy(s:run_jobs)->filter('v:val.status ==# "RUNNING"')
-        \ ->keys()->join("\n")
+  return join(keys(
+        \ filter(deepcopy(s:run_jobs),
+        \ 'v:val.status ==# "RUNNING"')
+        \  ), "\n")
 endfunction
 
 function! run#list_unsaved_jobs(...)
-  return deepcopy(s:run_jobs)->filter('v:val.save ==# 0 && v:val.status !=# "RUNNING"')
-        \ ->keys()->join("\n")
+  return join(keys(
+        \ filter(deepcopy(s:run_jobs),
+        \ 'v:val.save ==# 0 && v:val.status !=# "RUNNING"')
+        \  ), "\n")
 endfunction
 
 function! run#is_qf_open()
@@ -589,17 +638,43 @@ endfunction
 
 
 " callbacks
-function! run#out_cb(channel, msg)
+function! run#out_cb(channel, msg, ...)
   " write logs to output file while running
-  let job = run#get_job_with_object(ch_getjob(a:channel))
+  let job_obj = has('nvim') ? a:channel : ch_getjob(a:channel)
+  let job = run#get_job_with_object(job_obj)
   let fname = job['filename']
-  call writefile([a:msg], fname, "a")
+  if has('nvim')
+    let output = a:msg
+    if empty(trim(output[-1]))
+      let output = output[:-2]
+    endif
+  else
+    let output = [a:msg]
+  endif
+  call writefile(output, fname, "a")
 endfunction
 
-function! run#close_cb(channel)
-  let job = ch_getjob(a:channel)
-  let info = run#get_job_with_object(job)
-  let exitval = job_info(info['job'])['exitval']
+function! run#close_cb(channel, ...)
+  if has('nvim')
+    let job = a:channel
+    let info = run#get_job_with_object(job)
+    " nvim exitval is unreliable
+    let kill_idx = index(s:run_jobs_to_kill_nvim, info['timestamp'])
+    let exitval = get(a:, 1, 0)
+    if kill_idx > -1
+      let exitval = -1
+      call remove(s:run_jobs_to_kill_nvim, kill_idx)
+    endif
+  else
+    let job = ch_getjob(a:channel)
+    let info = run#get_job_with_object(job)
+    let exitval = job_info(info['job'])['exitval']
+  endif
+
+  " calculate status here
+  let status = (exitval == -1) ? 'KILLED' : (exitval == 0) ? 'DONE' : 'FAILED'
+  let s:run_jobs[info['timestamp']]['exitval'] = exitval
+  let s:run_jobs[info['timestamp']]['status'] = status
 
   " if saved and window unfocused, wipe temp buffer
   let bufexists = bufnr(info['bufname']) !=# -1
@@ -617,8 +692,9 @@ function! run#close_cb(channel)
     let s:run_killed_jobs += 1
 
     " killall finished
-    if s:run_killed_jobs ==# s:run_killall_ongoing
+    if len(run#list_running_jobs()) == 0
       let s:run_killall_ongoing = 0
+      let s:run_jobs_to_kill_nvim = []
       let msg = s:run_killed_jobs . 
             \ (s:run_killed_jobs !=# 1 ? ' jobs killed.' : ' job killed.')
       call run#alert_and_update(msg, kill_options)
