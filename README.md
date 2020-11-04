@@ -7,7 +7,7 @@ favorite code editor.
 
 ## Requirements
 This plugin relies on [channels](https://vimhelp.org/channel.txt.html), introduced in Vim 8.0.
-This is not yet supported in Neovim because of its different implementation of
+This is only partially supported in Neovim because of its different implementation of
 [job control](https://neovim.io/doc/user/job_control.html).
 
 ## Introduction
