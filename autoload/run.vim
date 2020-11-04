@@ -242,6 +242,11 @@ function! run#RunAgainEdit() abort
 endfunction
 
 function! run#RunSendKeys(cmd, ...) abort
+  if has('nvim')
+    call run#print_formatted('ErrorMsg',
+          \ 'Sending keys to a running job is not supported in Neovim.')
+    return
+  endif
   let options = get(a:, 1, {})
 
   " finish editing first
