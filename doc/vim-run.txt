@@ -156,6 +156,12 @@ g:run_shell                                                        *g:run_shell*
 
         let g:run_shell = $SHELL               (default)
 <
+g:run_use_loclist                                            *g:run_use_loclist*
+    If enabled, the |RunList| will use the |location-list| of the current window 
+    instead of the default |quickfix| list. >
+
+        let g:run_use_loclist = 0              (default)
+
 g:run_quiet_default                                        *g:run_quiet_default*
     If enabled, all |:Run| commands will not open the |RunList| whenever jobs
     start or stop. Note that whenever jobs are updated and the |RunList| is

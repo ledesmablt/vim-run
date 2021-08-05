@@ -365,10 +365,10 @@ endfunction
 
 function! run#RunListToggle() abort
   if run#is_qf_open()
-    cclose
+    silent call run#closelist()
   else
     call run#update_run_jobs()
-    silent copen
+    silent call run#openlist()
   endif
 endfunction
 
@@ -471,13 +471,13 @@ function! run#RunBrowseLogs(...) abort
     call add(qf_output, qf_item)
   endfor
 
-  silent call setqflist(qf_output)
-  silent call setqflist([], 'a', {'title': 'RunLogs'})
+  silent call run#setlist(qf_output)
+  silent call run#setlist([], 'a', {'title': 'RunLogs'})
   let limit = min([limit, len(qf_output)])
   let msg = 'Showing the last ' . limit . ' saved logs.'
   call run#print_formatted('Normal', msg)
   if !run#is_qf_open()
-    silent copen
+    silent call run#openlist()
   endif
 endfunction
 
@@ -493,16 +493,60 @@ function! run#RunDeleteLogs() abort
   endif
   call system('rm ' . g:rundir . '/*.log')
 
-  let qf_title = get(getqflist({'title': 1}), 'title')
+  let qf_title = get(run#getlist({'title': 1}), 'title')
   if run#is_qf_open() && qf_title ==# 'RunLogs'
-    silent call setqflist([])
-    silent call setqflist([], 'a', {'title': 'RunLogs'})
+    silent call run#setlist([])
+    silent call run#setlist([], 'a', {'title': 'RunLogs'})
   endif
   call run#print_formatted('WarningMsg', 'Deleted all logs.')
 endfunction
 
 
 " utility
+function! run#setlist(...)
+  if g:run_use_loclist
+    if a:0 ==# 1
+      call setloclist(0, a:1)
+    elseif a:0 ==# 2
+      call setloclist(0, a:1, a:2)
+    elseif a:0 ==# 3
+      call setloclist(0, a:1, a:2, a:3)
+    endif
+  else
+    if a:0 ==# 1
+      call setqflist(a:1)
+    elseif a:0 ==# 2
+      call setqflist(a:1, a:2)
+    elseif a:0 ==# 3
+      call setqflist(a:1, a:2, a:3)
+    endif
+  endif
+endfunction
+
+function! run#getlist(arg)
+  if g:run_use_loclist
+    call getloclist(a:arg)
+  else
+    call getqflist(a:arg)
+  endif
+endfunction
+
+function! run#openlist()
+  if g:run_use_loclist
+    lopen
+  else
+    copen
+  endif
+endfunction
+
+function! run#closelist()
+  if g:run_use_loclist
+    lclose
+  else
+    cclose
+  endif
+endfunction
+
 function! run#cmd_input_open_editor(editor_lines, timestamp, ...)
   let options = get(a:, 1, {})
   let is_send = get(options, 'is_send')
@@ -582,8 +626,8 @@ function! run#update_run_jobs()
     call extend(s:run_jobs[val['timestamp']], { 'status': status })
   endfor
 
-  silent call setqflist(qf_output)
-  silent call setqflist([], 'a', {'title': 'RunList'})
+  silent call run#setlist(qf_output)
+  silent call run#setlist([], 'a', {'title': 'RunList'})
 endfunction
 
 function! run#alert_and_update(content, ...)
@@ -594,7 +638,7 @@ function! run#alert_and_update(content, ...)
 
   call run#update_run_jobs()
   if (!g:run_quiet_default || run#is_qf_open()) && !get(options, 'quiet')
-    silent copen
+    silent call run#openlist()
   endif
   let msg_format = get(options, 'msg_format', 'Normal')
   call run#print_formatted(msg_format, a:content)

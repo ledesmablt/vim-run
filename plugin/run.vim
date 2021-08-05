@@ -34,6 +34,7 @@ endif
 " user vars
 let g:rundir                   = get(g:, 'rundir',  $HOME . '/.vim/rundir')
 let g:run_shell                = get(g:, 'run_shell', $SHELL)
+let g:run_use_loclist          = get(g:, 'run_use_loclist', 0)
 let g:run_quiet_default        = get(g:, 'run_quiet_default', 0)
 let g:run_autosave_logs        = get(g:, 'run_autosave_logs', 0)
 let g:run_nostream_default     = get(g:, 'run_nostream_default', 0)
