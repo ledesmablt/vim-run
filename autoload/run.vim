@@ -361,6 +361,13 @@ function! run#RunKillAll() abort
   endfor
 endfunction
 
+function! run#RunShow() abort
+  let cmd = "find " . g:rundir . " -type f | sort -r" .
+        \ " | head -n 1"
+  let lastfile = trim(system(cmd))
+  exec 'split '.lastfile
+endfunction
+
 function! run#RunListToggle() abort
   if run#is_qf_open()
     silent call run#closelist()

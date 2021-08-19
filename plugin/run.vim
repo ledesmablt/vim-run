@@ -62,6 +62,7 @@ command -nargs=* -complete=file RunSendKeys :call run#RunSendKeys(<q-args>)
 command -nargs=? -complete=custom,run#list_running_jobs RunKill :call run#RunKill(<q-args>)
 command RunKillAll :call run#RunKillAll()
 
+command RunShow :call run#RunShow()
 command RunListToggle :call run#RunListToggle()
 command RunClear :call run#RunClear(['DONE', 'FAILED', 'KILLED'])
 command RunClearDone :call run#RunClear(['DONE'])

@@ -104,6 +104,9 @@ COMMANDS                                                      *vim-run-commands*
 :RunKillAll                                                        *:RunKillAll*
     Sends a SIGKILL signal to all running jobs.
 
+:RunShow                                                              *:RunShow*
+    Opens the output file of the last |Run| job in a split buffer.
+
 :RunListToggle                                                  *:RunListToggle*
     Opens or closes the |RunList| - a |quickfix| menu that shows all jobs,
     their status, and their log files. The list is updated every time jobs
