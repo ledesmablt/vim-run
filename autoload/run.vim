@@ -119,11 +119,9 @@ function! run#Run(cmd, ...) abort
   
   " run job as shell command to tempfile w/ details
   let date_cmd = 'date +"' . s:run_timestamp_format . '"'
-  let startline = has('nvim') ? 1 : 2
   call writefile(split(a:cmd, "\n"), currentcmdpath)
   call writefile([
-        \ 'printf "COMMAND: "',
-        \ 'cat ' .  currentcmdpath . " | sed '".startline.",${s/^/         /g}'",
+        \ 'printf "COMMAND: " && cat ' . currentcmdpath . " | sed '2,$s/^/         /g'",
         \ 'echo WORKDIR: ' . getcwd(),
         \ 'STARTED=$('.date_cmd.')',
         \ 'echo "STARTED: $STARTED"',
