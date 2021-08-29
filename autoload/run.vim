@@ -5,7 +5,7 @@ let s:loaded_run = 1
 
 " script vars
 let s:run_jobs                = get(s:, 'run_jobs', {})
-let s:run_last_command        = get(s:, 'run_last_command', '')
+let s:run_last_commands       = get(s:, 'run_last_commands', [])
 let s:run_last_options        = get(s:, 'run_last_options', {})
 let s:run_killall_ongoing     = get(s:, 'run_killall_ongoing', 0)
 let s:run_timestamp_format    = get(s:, 'run_timestamp_format', '%Y-%m-%d %H:%M:%S')
@@ -83,7 +83,8 @@ function! run#Run(cmd, ...) abort
   
   if empty(trim(a:cmd))
     " no text provided in cmd input
-    if get(options, 'is_from_editor') && !get(options, 'edit_last')
+    let edit_cmd = get(options, 'edit_cmd', '')
+    if get(options, 'is_from_editor') && empty(edit_cmd)
       call run#print_formatted('WarningMsg', 'User cancelled command input.')
       return
     endif
@@ -98,8 +99,8 @@ function! run#Run(cmd, ...) abort
     let s:run_edit_options = options
     let s:run_edit_path = s:run_cmd_path . 'edit-' . timestamp . '.sh'
     let editor_lines = [s:edit_msg, '']
-    if get(options, 'edit_last')
-      call extend(editor_lines, split(s:run_last_command, "\n"))
+    if !empty(edit_cmd)
+      call extend(editor_lines, split(edit_cmd, "\n"))
     else
       call add(editor_lines, '')
     endif
@@ -108,7 +109,7 @@ function! run#Run(cmd, ...) abort
     return
   endif
 
-  let s:run_last_command = a:cmd
+  let s:run_last_commands = extend([a:cmd], s:run_last_commands)
   let s:run_last_options = options
   let shortcmd = run#clean_cmd_name(a:cmd)
   let fname = timestamp . '__' . shortcmd . '.log'
@@ -219,23 +220,47 @@ function! run#RunNoStream(cmd) abort
   call run#Run(a:cmd, { 'nostream': 1 })
 endfunction
 
-function! run#RunAgain() abort
-  if empty(s:run_last_command)
+function! run#RunAgain(...) abort
+  if empty(s:run_last_commands)
     call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
   endif
-  call run#Run(s:run_last_command, s:run_last_options)
+  let index = get(a:, 1)
+  if empty(index) | let index = '0' | endif
+  if index !~# '^\d\+$'
+    call run#print_formatted('ErrorMsg', 'Index must be a number.')
+    return
+  endif
+  try
+    let selected_command = s:run_last_commands[index]
+  catch
+    call run#print_formatted('ErrorMsg', 'Index '.index.' out of range')
+    return
+  endtry
+  call run#Run(selected_command, s:run_last_options)
 endfunction
 
-function! run#RunAgainEdit() abort
-  if empty(s:run_last_command)
+function! run#RunAgainEdit(...) abort
+  if empty(s:run_last_commands)
     call run#print_formatted('ErrorMsg', 'Please run a command first.')
     return
   endif
+  let index = get(a:, 1)
+  if empty(index) | let index = '0' | endif
+  if index !~# '^\d\+$'
+    call run#print_formatted('ErrorMsg', 'Index must be a number.')
+    return
+  endif
+  try
+    let selected_command = s:run_last_commands[index]
+  catch
+    call run#print_formatted('ErrorMsg', 'Index '.index.' out of range')
+    return
+  endtry
   let new_opts = deepcopy(s:run_last_options)
-  let new_opts['edit_last'] = 1
+  let new_opts['edit_cmd'] = selected_command
   call run#Run('', new_opts)
-  unlet new_opts['edit_last']
+  unlet new_opts['edit_cmd']
   let s:run_last_options = new_opts
 endfunction
 

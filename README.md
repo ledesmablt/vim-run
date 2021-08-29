@@ -53,8 +53,8 @@ vim -c 'helptags vim-run/doc' -c quit
 :RunSplit [<command>]
 :RunVSplit [<command>]
 :RunNoStream [<command>]
-:RunAgain
-:RunAgainEdit
+:RunAgain [<index>]
+:RunAgainEdit [<index>]
 :RunSendKeys [<text>]
 
 " kill jobs
@@ -78,6 +78,7 @@ vim -c 'helptags vim-run/doc' -c quit
 ```vim
 let g:rundir = ~/.vim/rundir
 let g:run_shell = $SHELL
+let g:run_use_loclist = 0
 let g:run_quiet_default = 0
 let g:run_autosave_logs = 0
 let g:run_nostream_default = 0

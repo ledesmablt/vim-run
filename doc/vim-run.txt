@@ -69,10 +69,10 @@ COMMANDS                                                      *vim-run-commands*
 :RunSplit [<command>]                                                *:RunSplit*
     Calls |:Run| <command> and opens the log buffer in a window above.
 
-:RunVSplit [<command>]                                               *:RunVSplit*
+:RunVSplit [<command>]                                              *:RunVSplit*
     Calls |:Run| <command> and opens the log buffer in a window to the right.
 
-:RunNoStream [<command>]                                           *:RunNoStream*
+:RunNoStream [<command>]                                          *:RunNoStream*
     Calls |:Run| <command> without creating a log buffer. The results only will 
     be written once the command stops. This is ideal for commands that produce
     a large amount of output quickly, which may cause performance issues.
@@ -80,12 +80,13 @@ COMMANDS                                                      *vim-run-commands*
     Enabling |g:run_nostream_default| will cause all |:Run| commands to behave
     this way.
 
-:RunAgain                                                            *:RunAgain*
-    Calls the last |:Run| command with its settings (quiet, watch, etc.)
+:RunAgain [<index>]                                                  *:RunAgain*
+    Calls the last |:Run| command with its settings (quiet, watch, etc.). You
+    may provide an <index> argument to call older commands (default = 0).
 
-:RunAgainEdit                                                    *:RunAgainEdit*
-    Calls |:RunAgain| but opens the last command in a temporary window before
-    starting its job (similar to calling |:Run| with no arguments).
+:RunAgainEdit [<index>]                                          *:RunAgainEdit*
+    Calls |:RunAgain| [<index>] but opens the last command in a temporary window
+    before starting its job (similar to calling |:Run| with no arguments).
 
 :RunSendKeys [<text>]                                             *:RunSendKeys*
     Sends <text> to the job of the currently focused buffer, similar to
