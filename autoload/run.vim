@@ -725,6 +725,8 @@ function! run#out_cb(channel, msg, ...)
   else
     let output = [a:msg]
   endif
+  " remove trailing spaces
+  let output = map(output, { i, v -> trim(v, '', 2) })
   call writefile(output, fname, "a")
 endfunction
 
